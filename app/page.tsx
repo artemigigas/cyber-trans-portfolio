@@ -1,9 +1,34 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Terminal, Cpu, Database, Shield, ArrowUpRight, Code, Activity, UserCheck, MessageSquare } from 'lucide-react';
+import { 
+  Terminal, Cpu, Database, Shield, ArrowUpRight, Code, 
+  Activity, UserCheck, MessageSquare, MapPin, Scale, AlertTriangle, CheckCircle 
+} from 'lucide-react';
 import CyberChat from './components/CyberChat';
+import { buscarProposicoesCamaraAPI } from './services/camaraService';
 
-export default function Home() {
+export default async function Home() {
+  // Busca os dados atualizados diretamente da API da Câmara no servidor
+  let dadosCamara = { totalBruto: 0, validados: [] };
+  let totalValidados = 0;
+  let totalRestritivas = 0;
+  let totalGarantidoras = 0;
+
+  try {
+    dadosCamara = await buscarProposicoesCamaraAPI();
+    totalValidados = dadosCamara.validados.length;
+    
+    totalRestritivas = dadosCamara.validados.filter(
+      (p) => p.postura.tipo === 'RESTRITIVA'
+    ).length;
+
+    totalGarantidoras = dadosCamara.validados.filter(
+      (p) => p.postura.tipo === 'GARANTIDORA'
+    ).length;
+  } catch (error) {
+    console.error("Erro ao carregar métricas da Câmara para a Home:", error);
+  }
+
   return (
     <main className="min-h-screen bg-cyber-dark text-cyber-white font-mono p-4 md:p-8 selection:bg-cyber-pink selection:text-black">
       {/* Moldura Global Estilo Terminal */}
@@ -40,8 +65,8 @@ export default function Home() {
               <a href="#ferramentas" className="bg-cyber-pink hover:bg-cyber-pink/80 text-black font-bold px-5 py-2.5 rounded flex items-center gap-2 transition-all shadow-[0_0_12px_#ff007f]">
                 <Terminal size={18} /> Acessar Ferramentas
               </a>
-              <Link href="/consulta-ministerio" className="border border-cyber-blue text-cyber-blue hover:bg-cyber-blue/10 px-5 py-2.5 rounded flex items-center gap-2 transition-all">
-                <Database size={18} /> Consultar API sem Python
+              <Link href="/camara" className="border border-cyber-pink text-cyber-pink hover:bg-cyber-pink/10 px-5 py-2.5 rounded flex items-center gap-2 transition-all">
+                <Scale size={18} /> Painel do Congresso ({totalValidados})
               </Link>
             </div>
           </div>
@@ -135,6 +160,51 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* CARD NOVO: OBSERVATÓRIO LEGISLATIVO DA CÂMARA */}
+            <div className="border border-cyber-pink/60 bg-black/60 p-5 rounded-lg hover:border-cyber-pink transition-all group relative overflow-hidden">
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-xs text-cyber-pink border border-cyber-pink/40 px-2 py-0.5 rounded flex items-center gap-1 font-bold">
+                  <Scale size={12} /> LEGISLAÇÃO / CÂMARA
+                </span>
+                <span className="text-xs text-cyber-green flex items-center gap-1">● EM TEMPO REAL</span>
+              </div>
+              
+              <h3 className="text-lg font-bold text-cyber-white group-hover:text-cyber-pink transition-colors">
+                Observatório de Proposições Trans
+              </h3>
+              
+              <p className="text-xs text-gray-400 mt-2 mb-4 leading-relaxed">
+                Monitoramento contínuo via API da Câmara dos Deputados com limpeza por Regex do TCR e classificação discursiva das matérias legislativas.
+              </p>
+
+              {/* CONTADORES EM TEMPO REAL */}
+              <div className="grid grid-cols-3 gap-2 bg-black/80 border border-gray-800 p-2.5 rounded my-3 text-center">
+                <div className="border-r border-gray-800">
+                  <span className="text-[10px] text-gray-400 block uppercase">Validadas</span>
+                  <span className="text-base font-extrabold text-cyber-white">{totalValidados}</span>
+                </div>
+                <div className="border-r border-gray-800">
+                  <span className="text-[10px] text-red-400 block uppercase flex items-center justify-center gap-1">
+                    <AlertTriangle size={10} /> Restritivas
+                  </span>
+                  <span className="text-base font-extrabold text-red-400">{totalRestritivas}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-emerald-400 block uppercase flex items-center justify-center gap-1">
+                    <CheckCircle size={10} /> Garantidoras
+                  </span>
+                  <span className="text-base font-extrabold text-emerald-400">{totalGarantidoras}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-gray-800 pt-3 text-xs">
+                <span className="text-gray-500">API v2 / Dados Abertos</span>
+                <Link href="/painel-camara" className="text-cyber-pink hover:underline flex items-center gap-1 font-bold">
+                  Abrir Monitor <ArrowUpRight size={14} />
+                </Link>
+              </div>
+            </div>
             
             {/* Card Ferramenta 1 */}
             <div className="border border-cyber-pink/40 bg-black/50 p-5 rounded-lg hover:border-cyber-pink transition-all group">
@@ -173,6 +243,31 @@ export default function Home() {
                 <a href="https://github.com" target="_blank" rel="noreferrer" className="text-cyber-pink hover:underline flex items-center gap-1">
                   Ver no GitHub <Code size={14} />
                 </a>
+              </div>
+            </div>
+
+            {/* Card Ferramenta 3 - Mapeamento Quilombola & Atenção Primária */}
+            <div className="border border-cyber-green/40 bg-black/50 p-5 rounded-lg hover:border-cyber-green transition-all group">
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-xs text-cyber-green border border-cyber-green/30 px-2 py-0.5 rounded flex items-center gap-1">
+                  <MapPin size={12} /> GEO / SAÚDE COLETIVA
+                </span>
+                <span className="text-xs text-cyber-green flex items-center gap-1">● ONLINE</span>
+              </div>
+              
+              <h3 className="text-lg font-bold text-cyber-white group-hover:text-cyber-green transition-colors">
+                Quilombos Urbanos & Atenção Primária
+              </h3>
+              
+              <p className="text-xs text-gray-400 mt-2 mb-4 leading-relaxed">
+                Mapa interativo com a densidade populacional censitária (Censo IBGE 2022 vs. Estimativa Territorial) dos 11 territórios de Porto Alegre e a vinculação com as Unidades de Saúde de referência.
+              </p>
+              
+              <div className="flex items-center justify-between border-t border-gray-800 pt-3 text-xs">
+                <span className="text-gray-500">Dados: IBGE / e-SUS APS</span>
+                <Link href="/quilombos" className="text-cyber-green hover:underline flex items-center gap-1 font-bold">
+                  Mapeamento <ArrowUpRight size={14} />
+                </Link>
               </div>
             </div>
 
