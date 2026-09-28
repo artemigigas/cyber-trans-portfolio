@@ -6,29 +6,56 @@ import {
 } from 'lucide-react';
 import CyberChat from './components/CyberChat';
 import { buscarProposicoesCamaraAPI } from './services/camaraService';
+
+// Tipagem para o TypeScript do Next.js
+interface Proposicao {
+  id: number;
+  tipo: string;
+  numero: number;
+  ano: number;
+  ementa: string;
+  dataApresentacao: string;
+  postura: {
+    tipo: 'RESTRITIVA' | 'GARANTIDORA' | 'NEUTRA';
+    label: string;
+    color: string;
+  };
+  url: string;
+}
+
+interface DadosCamara {
+  totalBruto: number;
+  validados: Proposicao[];
+}
+
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  // Busca os dados atualizados diretamente da API da Câmara no servidor
-  let dadosCamara = { totalBruto: 0, validados: [] };
+  // Inicialização tipada corretamente para evitar o tipo 'never[]'
+  let dadosCamara: DadosCamara = { totalBruto: 0, validados: [] };
   let totalValidados = 0;
   let totalRestritivas = 0;
   let totalGarantidoras = 0;
 
   try {
-    dadosCamara = await buscarProposicoesCamaraAPI();
-    totalValidados = dadosCamara.validados.length;
-    
-    totalRestritivas = dadosCamara.validados.filter(
-      (p) => p.postura.tipo === 'RESTRITIVA'
-    ).length;
+    const res = await buscarProposicoesCamaraAPI();
+    if (res && Array.isArray(res.validados)) {
+      dadosCamara = res as DadosCamara;
+      totalValidados = dadosCamara.validados.length;
+      
+      totalRestritivas = dadosCamara.validados.filter(
+        (p: Proposicao) => p.postura?.tipo === 'RESTRITIVA'
+      ).length;
 
-    totalGarantidoras = dadosCamara.validados.filter(
-      (p) => p.postura.tipo === 'GARANTIDORA'
-    ).length;
+      totalGarantidoras = dadosCamara.validados.filter(
+        (p: Proposicao) => p.postura?.tipo === 'GARANTIDORA'
+      ).length;
+    }
   } catch (error) {
-    console.error("Erro ao carregar métricas da Câmara para a Home:", error);
+    console.error("Aviso: Falha ao carregar dados da Câmara durante o build:", error);
   }
+
+  
 
   return (
     <main className="min-h-screen bg-cyber-dark text-cyber-white font-mono p-4 md:p-8 selection:bg-cyber-pink selection:text-black">
