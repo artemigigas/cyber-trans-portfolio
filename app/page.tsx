@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import CyberChat from './components/CyberChat';
 import { buscarProposicoesCamaraAPI } from './services/camaraService';
+export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   // Busca os dados atualizados diretamente da API da Câmara no servidor
