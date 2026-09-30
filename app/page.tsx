@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { 
   Terminal, Cpu, Database, Shield, ArrowUpRight, Code, 
-  Activity, UserCheck, MessageSquare, MapPin, Scale, AlertTriangle, CheckCircle 
+  Activity, UserCheck, MessageSquare, MapPin, Scale, AlertTriangle, CheckCircle, Heart
 } from 'lucide-react';
 import CyberChat from './components/CyberChat';
 import { buscarProposicoesCamaraAPI } from './services/camaraService';
@@ -55,8 +55,6 @@ export default async function Home() {
     console.error("Aviso: Falha ao carregar dados da Câmara durante o build:", error);
   }
 
-  
-
   return (
     <main className="min-h-screen bg-cyber-dark text-cyber-white font-mono p-4 md:p-8 selection:bg-cyber-pink selection:text-black">
       {/* Moldura Global Estilo Terminal */}
@@ -86,7 +84,7 @@ export default async function Home() {
               </span>
             </h1>
             <p className="text-gray-300 max-w-xl text-sm md:text-base leading-relaxed mb-6">
-              Desenvolvo ferramentas gratuitas e interfaces acessíveis para democratizar o acesso a dados públicos da saúde e dados governamentais. Sem barreiras de código, sem intermediários.
+              Desenvolvo ferramentas gratuitas, aplicações interativas e interfaces acessíveis para democratizar o acesso a dados públicos de saúde e redes de cuidado. Sem barreiras de código, sem intermediários.
             </p>
             
             <div className="flex flex-wrap gap-4">
@@ -167,7 +165,8 @@ export default async function Home() {
                 <span className="bg-black/60 border border-cyber-green/40 text-cyber-green px-2 py-1 rounded">#SaúdeColetiva</span>
                 <span className="bg-black/60 border border-cyber-pink/40 text-cyber-pink px-2 py-1 rounded">#Transfeminismo</span>
                 <span className="bg-black/60 border border-cyber-blue/40 text-cyber-blue px-2 py-1 rounded">#OpenData</span>
-                <span className="bg-black/60 border border-gray-600 text-gray-300 px-2 py-1 rounded">#Python & Next.js</span>
+                <span className="bg-black/60 border border-purple-400/40 text-purple-300 px-2 py-1 rounded">#ReactJS & Next.js</span>
+                <span className="bg-black/60 border border-gray-600 text-gray-300 px-2 py-1 rounded">#Python</span>
               </div>
             </div>
           </div>
@@ -180,7 +179,7 @@ export default async function Home() {
               <h2 className="text-xl font-bold text-cyber-green flex items-center gap-2">
                 <Cpu size={20} /> // FERRAMENTAS_DISPONÍVEIS
               </h2>
-              <p className="text-xs text-gray-400 mt-1">Softwares e scripts totalmente gratuitos e livres.</p>
+              <p className="text-xs text-gray-400 mt-1">Softwares, jogos interativos e scripts totalmente gratuitos e livres.</p>
             </div>
             <span className="text-xs text-cyber-green border border-cyber-green/30 px-2 py-1 rounded hidden sm:inline">
               STATUS: SERVIDORES ATIVOS
@@ -189,7 +188,32 @@ export default async function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            {/* CARD NOVO: OBSERVATÓRIO LEGISLATIVO DA CÂMARA */}
+            {/* CARD 1: SEM ARMADURA (NOVO JOGO REACT / HTML) */}
+            <div className="border border-pink-400/60 bg-black/60 p-5 rounded-lg hover:border-pink-300 transition-all group relative overflow-hidden shadow-[0_0_15px_rgba(255,183,178,0.15)]">
+              <div className="flex justify-between items-start mb-3">
+                <span className="text-xs text-rose-300 border border-rose-300/40 px-2 py-0.5 rounded flex items-center gap-1 font-bold">
+                  <Heart size={12} className="text-rose-400" /> REACTJS / WEB GAME
+                </span>
+                <span className="text-xs text-cyber-green flex items-center gap-1">● ONLINE</span>
+              </div>
+              
+              <h3 className="text-lg font-bold text-cyber-white group-hover:text-pink-300 transition-colors">
+               Nós em Nós - um baralho sobre afeto e nós que a gente desata 💖
+              </h3>
+              
+              <p className="text-xs text-gray-400 mt-2 mb-4 leading-relaxed">
+                Jogo de cartas interativo para trocas sinceras, escuta ativa e vulnerabilidade. Inclui gerador de cartas e guia territorial de atendimento psicológico a baixo custo em Porto Alegre.
+              </p>
+
+              <div className="flex items-center justify-between border-t border-gray-800 pt-3 text-xs">
+                <span className="text-gray-500">ReactJS / Tailwind CSS</span>
+                <Link href="sem-armadura" className="text-pink-300 hover:underline flex items-center gap-1 font-bold">
+                  Jogar Agora <ArrowUpRight size={14} />
+                </Link>
+              </div>
+            </div>
+
+            {/* CARD 2: OBSERVATÓRIO LEGISLATIVO DA CÂMARA */}
             <div className="border border-cyber-pink/60 bg-black/60 p-5 rounded-lg hover:border-cyber-pink transition-all group relative overflow-hidden">
               <div className="flex justify-between items-start mb-3">
                 <span className="text-xs text-cyber-pink border border-cyber-pink/40 px-2 py-0.5 rounded flex items-center gap-1 font-bold">
@@ -234,7 +258,7 @@ export default async function Home() {
               </div>
             </div>
             
-            {/* Card Ferramenta 1 */}
+            {/* Card Ferramenta 3 */}
             <div className="border border-cyber-pink/40 bg-black/50 p-5 rounded-lg hover:border-cyber-pink transition-all group">
               <div className="flex justify-between items-start mb-3">
                 <span className="text-xs text-cyber-pink border border-cyber-pink/30 px-2 py-0.5 rounded">API / SAÚDE</span>
@@ -254,27 +278,7 @@ export default async function Home() {
               </div>
             </div>
 
-            {/* Card Ferramenta 2 */}
-            <div className="border border-cyber-blue/40 bg-black/50 p-5 rounded-lg hover:border-cyber-blue transition-all group">
-              <div className="flex justify-between items-start mb-3">
-                <span className="text-xs text-cyber-blue border border-cyber-blue/30 px-2 py-0.5 rounded">AUTOMAÇÃO</span>
-                <span className="text-xs text-cyber-green flex items-center gap-1">● ONLINE</span>
-              </div>
-              <h3 className="text-lg font-bold text-cyber-white group-hover:text-cyber-blue transition-colors">
-                Analisador de Indicadores Sociais
-              </h3>
-              <p className="text-xs text-gray-400 mt-2 mb-4 leading-relaxed">
-                Script de cruzamento automático de microdados governamentais focado em marcadores sociais e recortes de vulnerabilidade.
-              </p>
-              <div className="flex items-center justify-between border-t border-gray-800 pt-3 text-xs">
-                <span className="text-gray-500">Open Source</span>
-                <a href="https://github.com" target="_blank" rel="noreferrer" className="text-cyber-pink hover:underline flex items-center gap-1">
-                  Ver no GitHub <Code size={14} />
-                </a>
-              </div>
-            </div>
-
-            {/* Card Ferramenta 3 - Mapeamento Quilombola & Atenção Primária */}
+            {/* Card Ferramenta 4 - Mapeamento Quilombola & Atenção Primária */}
             <div className="border border-cyber-green/40 bg-black/50 p-5 rounded-lg hover:border-cyber-green transition-all group">
               <div className="flex justify-between items-start mb-3">
                 <span className="text-xs text-cyber-green border border-cyber-green/30 px-2 py-0.5 rounded flex items-center gap-1">
