@@ -9,66 +9,21 @@ import {
   MessageSquare,
   MapPin,
   Scale,
-  AlertTriangle,
-  CheckCircle,
   Heart,
   FileText,
   BarChart3,
   BookOpen,
   Camera,
+  Database,
 } from 'lucide-react';
 import CyberChat from './components/CyberChat';
-import { buscarProposicoesCamaraAPI } from './services/camaraService';
 
 // Altere para true quando desejar exibir a assistente de IA novamente
 const SHOW_AI_ASSISTANT = false;
 
-interface Proposicao {
-  id: number;
-  tipo: string;
-  numero: number;
-  ano: number;
-  ementa: string;
-  dataApresentacao: string;
-  postura: {
-    tipo: 'RESTRITIVA' | 'GARANTIDORA' | 'NEUTRA';
-    label: string;
-    color: string;
-  };
-  url: string;
-}
+export const dynamic = 'force-static';
 
-interface DadosCamara {
-  totalBruto: number;
-  validados: Proposicao[];
-}
-
-export const dynamic = 'force-dynamic';
-
-export default async function Home() {
-  let dadosCamara: DadosCamara = { totalBruto: 0, validados: [] };
-  let totalValidados = 0;
-  let totalRestritivas = 0;
-  let totalGarantidoras = 0;
-
-  try {
-    const res = await buscarProposicoesCamaraAPI();
-    if (res && Array.isArray(res.validados)) {
-      dadosCamara = res as DadosCamara;
-      totalValidados = dadosCamara.validados.length;
-
-      totalRestritivas = dadosCamara.validados.filter(
-        (p: Proposicao) => p.postura?.tipo === 'RESTRITIVA'
-      ).length;
-
-      totalGarantidoras = dadosCamara.validados.filter(
-        (p: Proposicao) => p.postura?.tipo === 'GARANTIDORA'
-      ).length;
-    }
-  } catch (error) {
-    console.error('Aviso: Falha ao carregar dados da Câmara durante o build:', error);
-  }
-
+export default function Home() {
   return (
     <main className="min-h-screen bg-cyber-dark text-cyber-white font-sans p-4 md:p-8 selection:bg-cyber-pink selection:text-black">
       {/* Container Principal */}
@@ -89,6 +44,7 @@ export default async function Home() {
             </a>
             <Link
               href="/cv"
+              prefetch={false}
               className="text-cyber-pink hover:underline flex items-center gap-1 font-semibold"
             >
               <FileText size={13} /> Currículo / PDF
@@ -118,12 +74,14 @@ export default async function Home() {
             <div className="flex flex-wrap gap-3 font-mono text-xs md:text-sm">
               <Link
                 href="/painel-camara"
+                prefetch={false}
                 className="bg-cyber-pink hover:bg-cyber-pink/90 text-black font-bold px-5 py-2.5 rounded flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(255,0,127,0.3)]"
               >
-                <Scale size={16} /> Observatório Legislativo ({totalValidados})
+                <Scale size={16} /> Observatório Legislativo
               </Link>
               <Link
                 href="/cv"
+                prefetch={false}
                 className="border border-cyber-blue/60 text-cyber-blue hover:bg-cyber-blue/10 px-5 py-2.5 rounded flex items-center gap-2 transition-all"
               >
                 <FileText size={16} /> Currículo (PDF)
@@ -260,7 +218,7 @@ export default async function Home() {
                   <span className="text-[11px] text-cyber-pink bg-cyber-pink/10 border border-cyber-pink/30 px-2 py-0.5 rounded flex items-center gap-1 font-semibold">
                     <Scale size={12} /> INTELIGÊNCIA LEGISLATIVA
                   </span>
-                  <span className="text-[11px] text-cyber-green">● API EM TEMPO REAL</span>
+                  <span className="text-[11px] text-cyber-blue">● SOB DEMANDA</span>
                 </div>
 
                 <h3 className="text-lg font-bold text-cyber-white group-hover:text-cyber-pink transition-colors">
@@ -268,33 +226,35 @@ export default async function Home() {
                 </h3>
 
                 <p className="text-xs text-gray-300 mt-2 mb-4 leading-relaxed">
-                  Monitoramento contínuo via API da Câmara dos Deputados com filtragem por Regex e classificação discursiva automatizada para subsidiar acompanhamento parlamentar.
+                  Monitoramento via API da Câmara dos Deputados com filtragem temática por Regex, varredura por descritores e classificação discursiva automatizada para subsidiar acompanhamento parlamentar.
                 </p>
 
-                {/* CONTADORES EM TEMPO REAL */}
+                {/* INDICADORES DE MÓDULO (SEM BLOQUEIO DE API NA HOME) */}
                 <div className="grid grid-cols-3 gap-2 bg-black/80 border border-gray-800 p-2.5 rounded my-3 text-center font-mono">
                   <div className="border-r border-gray-800">
-                    <span className="text-[10px] text-gray-400 block uppercase">Validadas</span>
-                    <span className="text-base font-extrabold text-cyber-white">{totalValidados}</span>
+                    <span className="text-[10px] text-gray-400 block uppercase">Extração</span>
+                    <span className="text-xs font-bold text-cyber-white flex items-center justify-center gap-1 mt-0.5">
+                      <Database size={11} className="text-cyber-pink" /> API v2
+                    </span>
                   </div>
                   <div className="border-r border-gray-800">
-                    <span className="text-[10px] text-red-400 block uppercase flex items-center justify-center gap-1">
-                      <AlertTriangle size={10} /> Restritivas
-                    </span>
-                    <span className="text-base font-extrabold text-red-400">{totalRestritivas}</span>
+                    <span className="text-[10px] text-red-400 block uppercase">Classificação</span>
+                    <span className="text-xs font-bold text-red-400 block mt-0.5">Restritivas</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-emerald-400 block uppercase flex items-center justify-center gap-1">
-                      <CheckCircle size={10} /> Garantidoras
-                    </span>
-                    <span className="text-base font-extrabold text-emerald-400">{totalGarantidoras}</span>
+                    <span className="text-[10px] text-emerald-400 block uppercase">Classificação</span>
+                    <span className="text-xs font-bold text-emerald-400 block mt-0.5">Garantidoras</span>
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center justify-between border-t border-gray-800 pt-3 text-xs font-mono mt-2">
                 <span className="text-gray-500">API Câmara v2 / Regex</span>
-                <Link href="/painel-camara" className="text-cyber-pink hover:underline flex items-center gap-1 font-bold">
+                <Link
+                  href="/painel-camara"
+                  prefetch={false}
+                  className="text-cyber-pink hover:underline flex items-center gap-1 font-bold"
+                >
                   Abrir Monitor <ArrowUpRight size={14} />
                 </Link>
               </div>
@@ -332,7 +292,7 @@ export default async function Home() {
               </div>
             </div>
 
-           {/* CARD 3: MAPEAMENTO QUILOMBOLA & ATENÇÃO PRIMÁRIA */}
+            {/* CARD 3: MAPEAMENTO QUILOMBOLA & ATENÇÃO PRIMÁRIA */}
             <div className="border border-cyber-green/40 bg-zinc-950/80 p-5 rounded-lg hover:border-cyber-green transition-all group flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-center mb-3 font-mono">
@@ -355,7 +315,11 @@ export default async function Home() {
 
               <div className="flex items-center justify-between border-t border-gray-800 pt-3 text-xs font-mono">
                 <span className="text-gray-500">Dados: IBGE / e-SUS APS (Em validação)</span>
-                <Link href="/quilombos" className="text-cyber-green hover:underline flex items-center gap-1 font-bold">
+                <Link
+                  href="/quilombos"
+                  prefetch={false}
+                  className="text-cyber-green hover:underline flex items-center gap-1 font-bold"
+                >
                   Ver Protótipo <ArrowUpRight size={14} />
                 </Link>
               </div>
@@ -382,7 +346,11 @@ export default async function Home() {
 
               <div className="flex items-center justify-between border-t border-gray-800 pt-3 text-xs font-mono">
                 <span className="text-gray-500">API Ministério da Saúde</span>
-                <Link href="/consulta-ministerio" className="text-cyber-blue hover:underline flex items-center gap-1 font-bold">
+                <Link
+                  href="/consulta-ministerio"
+                  prefetch={false}
+                  className="text-cyber-blue hover:underline flex items-center gap-1 font-bold"
+                >
                   Executar Consulta <ArrowUpRight size={14} />
                 </Link>
               </div>
@@ -409,7 +377,11 @@ export default async function Home() {
 
               <div className="flex items-center justify-between border-t border-gray-800 pt-3 text-xs font-mono">
                 <span className="text-gray-500">React / Tailwind CSS</span>
-                <Link href="/sem-armadura" className="text-pink-300 hover:underline flex items-center gap-1 font-bold">
+                <Link
+                  href="/sem-armadura"
+                  prefetch={false}
+                  className="text-pink-300 hover:underline flex items-center gap-1 font-bold"
+                >
                   Abrir Aplicação <ArrowUpRight size={14} />
                 </Link>
               </div>
@@ -454,6 +426,7 @@ export default async function Home() {
           </div>
           <Link
             href="/consulta-ministerio"
+            prefetch={false}
             className="whitespace-nowrap bg-cyber-green hover:bg-cyber-green/90 text-black font-bold font-mono px-6 py-3 rounded text-xs md:text-sm transition-all shadow-[0_0_15px_rgba(0,255,102,0.25)] inline-block"
           >
             ABRIR PAINEL DE CONSULTA
@@ -472,7 +445,7 @@ export default async function Home() {
             >
               GitHub
             </a>
-            <Link href="/cv" className="text-cyber-pink hover:underline">
+            <Link href="/cv" prefetch={false} className="text-cyber-pink hover:underline">
               Currículo (PDF)
             </Link>
           </div>
