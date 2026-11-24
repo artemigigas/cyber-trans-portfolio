@@ -144,7 +144,7 @@ export default async function Home() {
             <div className="border border-cyber-blue/40 bg-zinc-950/90 p-3.5 rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.1)] relative group">
               <div className="relative w-full h-72 rounded-lg overflow-hidden border border-gray-800">
                 <Image
-                  src="/perfilv2.jpg"
+                  src="/perfilv3.jpg"
                   alt="Artemísia de Medeiros Burgos"
                   fill
                   className="object-cover grayscale hover:grayscale-0 transition-all duration-500"
@@ -185,7 +185,7 @@ export default async function Home() {
         <section id="atuacao" className="mb-16 border-t border-gray-800 pt-10">
           <div className="mb-6">
             <h2 className="text-lg font-bold text-cyber-blue font-mono flex items-center gap-2">
-              <Shield size={18} /> EIXOS DE ENTREGA PARA MANDATO & GESTÃO
+              <Shield size={18} /> EIXOS DE ATUAÇÃO
             </h2>
             <p className="text-xs text-gray-400 mt-1">
               Atuação integrada entre assessoria técnica em políticas públicas, inteligência de dados, desenvolvimento e comunicação.

@@ -1,48 +1,19 @@
 'use client'; // Necessário no Next.js App Router para rodar useState/useEffect
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import Link from 'next/link';
 import { 
-  Search, Filter, Database, FileText, CheckCircle2, 
-  AlertCircle, RefreshCw, BarChart3, ArrowUpRight, BookOpen
+  Search, Filter, Database, AlertCircle, 
+  RefreshCw, ArrowUpRight, BookOpen, ArrowLeft, Calendar, Info
 } from 'lucide-react';
 
 // Aponta para o serviço dentro de app/services/ (ou use a alias @/app/services/camaraService)
 import { buscarProposicoesCamaraAPI } from '@/app/services/camaraService';
 import ModalNotaTCR from './ModalNotaTCR';
-// Dados Iniciais do Estudo (Mock Local de Fallback/Demonstração)
-const DADOS_LOCAIS = [
-  {
-    id: 1,
-    tipo: 'PL',
-    numero: 2432,
-    ano: 2023,
-    ementa: 'Garante o atendimento humanizado e a inclusão do nome social de pessoas trans nos registros de saúde do Sistema Único de Saúde (SUS).',
-    postura: { tipo: 'GARANTIDORA', label: 'Garantidora / Propositiva', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
-    url: 'https://www.camara.leg.br'
-  },
-  {
-    id: 2,
-    tipo: 'PL',
-    numero: 1045,
-    ano: 2024,
-    ementa: 'Dispõe sobre a vedação do uso de verbas públicas da saúde para procedimentos de redesignação sexual em menores de idade.',
-    postura: { tipo: 'RESTRITIVA', label: 'Restritiva / Reativa', color: 'bg-red-500/10 text-red-400 border-red-500/30' },
-    url: 'https://www.camara.leg.br'
-  },
-  {
-    id: 3,
-    tipo: 'RIC',
-    numero: 512,
-    ano: 2023,
-    ementa: 'Requer informações ao Ministério da Saúde sobre as filas de espera para o Processo Transexualizador no SUS nos estados do Sul.',
-    postura: { tipo: 'NEUTRA', label: 'Geral / Processual', color: 'bg-sky-500/10 text-sky-400 border-sky-500/30' },
-    url: 'https://www.camara.leg.br'
-  }
-];
 
 export default function PainelCamara() {
-  const [proposicoes, setProposicoes] = useState(DADOS_LOCAIS);
-  const [totalBruto, setTotalBruto] = useState(148);
+  const [proposicoes, setProposicoes] = useState([]);
+  const [totalBruto, setTotalBruto] = useState(0);
   const [termoBusca, setTermoBusca] = useState('');
   const [filtroPostura, setFiltroPostura] = useState('TODAS');
   const [carregando, setCarregando] = useState(false);
@@ -50,7 +21,7 @@ export default function PainelCamara() {
   const [itemSelecionado, setItemSelecionado] = useState(null);
   const [fonteViva, setFonteViva] = useState(false);
 
-  // Carregar dados da API oficial
+  // Carregar dados da API oficial sob demanda
   const carregarDadosAPI = async () => {
     setCarregando(true);
     setErro(null);
@@ -61,7 +32,7 @@ export default function PainelCamara() {
       setFonteViva(true);
     } catch (e) {
       console.error(e);
-      setErro('Não foi possível conectar à API da Câmara no momento. Exibindo dados locais.');
+      setErro('Não foi possível conectar à API da Câmara no momento. Tente novamente em instantes.');
     } finally {
       setCarregando(false);
     }
@@ -75,10 +46,33 @@ export default function PainelCamara() {
     return atendeTexto && atendeFiltro;
   });
 
+  // Contadores por postura
+  const contagemPosturas = {
+    TODAS: proposicoes.length,
+    GARANTIDORA: proposicoes.filter(p => p.postura.tipo === 'GARANTIDORA').length,
+    RESTRITIVA: proposicoes.filter(p => p.postura.tipo === 'RESTRITIVA').length,
+    NEUTRA: proposicoes.filter(p => p.postura.tipo === 'NEUTRA').length
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-8 font-sans">
       <div className="max-w-6xl mx-auto space-y-8">
         
+        {/* Barra Superior de Navegação */}
+        <div className="flex items-center justify-between">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white text-xs font-medium rounded-xl transition"
+          >
+            <ArrowLeft className="w-4 h-4 text-violet-400" />
+            Voltar ao Menu Principal
+          </Link>
+
+          <span className="text-[11px] font-mono text-zinc-500 hidden sm:inline">
+            API Dados Abertos v2 • Câmara dos Deputados
+          </span>
+        </div>
+
         {/* Topo / Título do Projeto */}
         <div className="border-b border-zinc-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -97,14 +91,34 @@ export default function PainelCamara() {
           <button
             onClick={carregarDadosAPI}
             disabled={carregando}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-800 text-white text-xs font-semibold rounded-xl shadow-lg transition"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-800 disabled:text-zinc-400 text-white text-xs font-semibold rounded-xl shadow-lg transition shrink-0"
           >
             <RefreshCw className={`w-4 h-4 ${carregando ? 'animate-spin' : ''}`} />
-            {carregando ? 'Consumindo API...' : 'Buscar Dados da API Viva'}
+            {carregando ? 'Consultando API...' : 'Buscar Dados da API Viva'}
           </button>
         </div>
 
-        {/* Banner Indicador de Fonte de Dados */}
+        {/* Disclaimer Inicial (antes de sincronizar) */}
+        {!fonteViva && !carregando && (
+          <div className="p-4 bg-sky-500/10 border border-sky-500/20 rounded-xl text-sky-300 text-xs flex items-start sm:items-center gap-3">
+            <Info className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0 text-sky-400" />
+            <span>
+              <strong>Base aguardando sincronização:</strong> para garantir o carregamento rápido da página, a extração não inicia automaticamente. Clique em <strong>"Buscar Dados da API Viva"</strong> acima para consultar as proposições em tempo real na Câmara dos Deputados.
+            </span>
+          </div>
+        )}
+
+        {/* Aviso durante varredura da API */}
+        {carregando && (
+          <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl text-violet-300 text-xs flex items-center gap-3">
+            <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+            <span>
+              Consultando descritores e varrendo os temas oficiais de Direitos Humanos e Saúde na Câmara. Isso pode levar alguns segundos para respeitar o limite da API...
+            </span>
+          </div>
+        )}
+
+        {/* Banner Indicador de Erro */}
         {erro && (
           <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -112,7 +126,7 @@ export default function PainelCamara() {
           </div>
         )}
 
-        {/* Cards Metricos (Quanti) */}
+        {/* Cards Métricos (Quanti) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-5 bg-zinc-900 border border-zinc-800/80 rounded-2xl">
             <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider block mb-1">
@@ -120,7 +134,7 @@ export default function PainelCamara() {
             </span>
             <div className="text-3xl font-black text-white">{totalBruto}</div>
             <span className="text-[11px] text-zinc-500 mt-2 block">
-              Termos brutos sem filtro discursivo
+              Registros coletados antes da filtragem
             </span>
           </div>
 
@@ -130,20 +144,20 @@ export default function PainelCamara() {
             </span>
             <div className="text-3xl font-black text-violet-400">{proposicoes.length}</div>
             <span className="text-[11px] text-zinc-500 mt-2 block">
-              Proposições filtradas por Regex
+              Proposições validadas para análise
             </span>
           </div>
 
           <div className="p-5 bg-zinc-900 border border-zinc-800/80 rounded-2xl">
             <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider block mb-1">
-              Fonte Atual
+              Status da Conexão
             </span>
             <div className="text-lg font-bold text-white flex items-center gap-2 mt-1">
-              <span className={`w-2.5 h-2.5 rounded-full ${fonteViva ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              {fonteViva ? 'API ao Vivo (Câmara)' : 'Amostra de Estudo (Local)'}
+              <span className={`w-2.5 h-2.5 rounded-full ${fonteViva ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'}`} />
+              {fonteViva ? 'Sincronizado (API Câmara)' : 'Aguardando Consulta'}
             </div>
             <span className="text-[11px] text-zinc-500 mt-2 block">
-              {fonteViva ? 'Dados sincronizados via dadosabertos.camara.leg.br' : 'Clique no botão acima para sincronizar com a API'}
+              {fonteViva ? 'Dados ativos via dadosabertos.camara.leg.br' : 'Nenhuma requisição disparada ainda'}
             </span>
           </div>
         </div>
@@ -157,7 +171,8 @@ export default function PainelCamara() {
               placeholder="Buscar por ementa, PL, ano..."
               value={termoBusca}
               onChange={(e) => setTermoBusca(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-violet-500 transition"
+              disabled={!fonteViva}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-violet-500 disabled:opacity-50 transition"
             />
           </div>
 
@@ -167,21 +182,54 @@ export default function PainelCamara() {
               <button
                 key={postura}
                 onClick={() => setFiltroPostura(postura)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
+                disabled={!fonteViva}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap inline-flex items-center gap-1.5 disabled:opacity-50 ${
                   filtroPostura === postura
                     ? 'bg-violet-600 text-white'
                     : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
                 }`}
               >
-                {postura}
+                <span>{postura}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  filtroPostura === postura ? 'bg-violet-500 text-white' : 'bg-zinc-800 text-zinc-400'
+                }`}>
+                  {contagemPosturas[postura]}
+                </span>
               </button>
             ))}
           </div>
         </div>
 
+        {/* Contador de resultados exibidos (só aparece após sincronizar) */}
+        {fonteViva && (
+          <div className="text-xs text-zinc-500 flex items-center justify-between px-1">
+            <span>
+              Exibindo <strong className="text-zinc-300">{proposicoesFiltradas.length}</strong> de {proposicoes.length} proposições validadas
+            </span>
+            {(termoBusca || filtroPostura !== 'TODAS') && (
+              <button
+                onClick={() => { setTermoBusca(''); setFiltroPostura('TODAS'); }}
+                className="text-violet-400 hover:text-violet-300 underline"
+              >
+                Limpar filtros
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Lista / Feed de Proposições */}
         <div className="space-y-4">
-          {proposicoesFiltradas.length === 0 ? (
+          {!fonteViva ? (
+            <div className="p-12 text-center bg-zinc-900/30 border border-dashed border-zinc-800 rounded-2xl space-y-3">
+              <Database className="w-8 h-8 text-zinc-600 mx-auto" />
+              <p className="text-zinc-400 text-sm font-medium">
+                Nenhum dado carregado no painel
+              </p>
+              <p className="text-zinc-500 text-xs max-w-md mx-auto">
+                Clique no botão <strong className="text-violet-400">"Buscar Dados da API Viva"</strong> no topo da página para iniciar a extração e classificação das proposições legislativas.
+              </p>
+            </div>
+          ) : proposicoesFiltradas.length === 0 ? (
             <div className="p-12 text-center bg-zinc-900/30 border border-zinc-800/50 rounded-2xl text-zinc-500 text-sm">
               Nenhuma proposição encontrada para os filtros aplicados.
             </div>
@@ -192,13 +240,19 @@ export default function PainelCamara() {
                 className="p-5 bg-zinc-900 border border-zinc-800/80 hover:border-zinc-700 rounded-2xl transition duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
                 <div className="space-y-2 max-w-3xl">
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <span className="text-sm font-black text-white font-mono">
                       {item.tipo} {item.numero}/{item.ano}
                     </span>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${item.postura.color}`}>
                       {item.postura.label}
                     </span>
+                    {item.dataApresentacao && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-zinc-500 font-mono">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(item.dataApresentacao).toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-zinc-300 leading-relaxed font-serif">
                     {item.ementa}
