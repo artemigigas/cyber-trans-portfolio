@@ -66,7 +66,8 @@ interface VisitorAgent {
   rightLeg: THREE.Mesh;
   leftArm: THREE.Mesh;
   rightArm: THREE.Mesh;
-  mode: 'walk' | 'observe';
+  head?: THREE.Mesh;
+  mode: 'walk' | 'observe' | 'work';
   roomIndex: number;
   nextRoomIndex: number;
   progress: number;
@@ -76,6 +77,14 @@ interface VisitorAgent {
   baseRotY: number;
   roleTitle: string;
   policy: Policy;
+}
+
+interface VehicleAgent {
+  group: THREE.Group;
+  axis: 'x' | 'z';
+  dir: 1 | -1;
+  speed: number;
+  limit: number;
 }
 
 interface SceneObjectsState {
@@ -756,6 +765,60 @@ function createRoomSignTexture(policy: Policy): THREE.CanvasTexture {
   return tex;
 }
 
+function createMonitorScreenTexture(policy: Policy, seed: number): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 160;
+  const ctx = canvas.getContext('2d')!;
+
+  // Fundo estilo sistema de gestão / e-SUS / painel de indicadores
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, 256, 160);
+
+  // Barra superior
+  ctx.fillStyle = policy.color;
+  ctx.fillRect(0, 0, 256, 22);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.fillText(`SMS POA • ${policy.number} ${policy.shortTitle.slice(0, 16)}`, 8, 14);
+
+  // Sidebar simulada
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(0, 22, 52, 138);
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = i === seed % 5 ? policy.accent : '#475569';
+    ctx.fillRect(8, 32 + i * 20, 36, 8);
+  }
+
+  // Cards de indicadores / gráficos
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(62, 30, 86, 48);
+  ctx.fillRect(156, 30, 90, 48);
+
+  // Barras de gráfico
+  const barColors = [policy.accent, '#38bdf8', '#34d399', '#fbbf24'];
+  for (let b = 0; b < 4; b++) {
+    const h = 14 + ((seed * 7 + b * 11) % 24);
+    ctx.fillStyle = barColors[b];
+    ctx.fillRect(70 + b * 18, 72 - h, 11, h);
+  }
+
+  // Linhas de prontuário / planilha na parte inferior
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(62, 86, 184, 64);
+  for (let r = 0; r < 4; r++) {
+    ctx.fillStyle = r % 2 === 0 ? '#334155' : '#263345';
+    ctx.fillRect(68, 92 + r * 13, 172, 9);
+    ctx.fillStyle = policy.accent;
+    ctx.fillRect(70, 94 + r * 13, 28 + ((r * 17 + seed) % 45), 5);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function generateArtworkDataURL(policy: Policy, photo: Partial<PhotoItem>, index: number): string {
   if (typeof document === 'undefined') return '';
 
@@ -828,10 +891,208 @@ function generateArtworkDataURL(policy: Policy, photo: Partial<PhotoItem>, index
 
 /**
  * ============================================================================
- * CONSTRUTOR DE PERSONAGEM 3D (EQUIPES TÉCNICAS & VISITANTES DO PAVILHÃO)
+ * MOBILIÁRIO DE REPARTIÇÃO (MESA, COMPUTADOR, CADEIRA, PASTAS E PLANTAS)
  * ============================================================================
  */
-function buildTechnicalPersonMesh(seed: number, policy: Policy, hasClipboard: boolean) {
+function buildOfficeWorkstation(policy: Policy, seed: number): THREE.Group {
+  const station = new THREE.Group();
+
+  const deskWoodMat = new THREE.MeshStandardMaterial({ color: '#c89d6c', roughness: 0.65 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: '#27272a', roughness: 0.45, metalness: 0.6 });
+  const plasticDarkMat = new THREE.MeshStandardMaterial({ color: '#18181b', roughness: 0.5 });
+  const chairFabricMat = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.85 });
+  const policyMat = new THREE.MeshStandardMaterial({ color: policy.color, roughness: 0.5 });
+
+  // Tampo da mesa (1.65m x 0.78m)
+  const deskTop = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.06, 0.78), deskWoodMat);
+  deskTop.position.set(0, 0.74, 0);
+  deskTop.castShadow = true;
+  deskTop.receiveShadow = true;
+  station.add(deskTop);
+
+  // Pés metálicos da mesa
+  [
+    [-0.75, -0.32],
+    [0.75, -0.32],
+    [-0.75, 0.32],
+    [0.75, 0.32]
+  ].forEach(([lx, lz]) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.72, 0.05), metalMat);
+    leg.position.set(lx, 0.36, lz);
+    leg.castShadow = true;
+    station.add(leg);
+  });
+
+  // Painel frontal modesto da mesa
+  const modestyPanel = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.36, 0.03), deskWoodMat);
+  modestyPanel.position.set(0, 0.53, -0.3);
+  station.add(modestyPanel);
+
+  // Base e haste do monitor
+  const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.18), plasticDarkMat);
+  standBase.position.set(-0.08, 0.78, -0.16);
+  station.add(standBase);
+
+  const standNeck = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.18, 0.04), plasticDarkMat);
+  standNeck.position.set(-0.08, 0.87, -0.19);
+  station.add(standNeck);
+
+  // Monitor Widescreen
+  const monitorHousing = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.42, 0.04), plasticDarkMat);
+  monitorHousing.position.set(-0.08, 1.08, -0.17);
+  monitorHousing.castShadow = true;
+  station.add(monitorHousing);
+
+  // Tela do Monitor (voltada para +Z, onde senta o trabalhador)
+  const screenTex = createMonitorScreenTexture(policy, seed);
+  const screenMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.63, 0.37),
+    new THREE.MeshBasicMaterial({ map: screenTex })
+  );
+  screenMesh.position.set(-0.08, 1.08, -0.148);
+  station.add(screenMesh);
+
+  // Gabinete / Mini-CPU na lateral direita da mesa
+  const pcTower = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.36, 0.36), plasticDarkMat);
+  pcTower.position.set(0.62, 0.95, -0.12);
+  pcTower.castShadow = true;
+  station.add(pcTower);
+
+  const pcLed = new THREE.Mesh(
+    new THREE.BoxGeometry(0.02, 0.12, 0.01),
+    new THREE.MeshBasicMaterial({ color: policy.accent })
+  );
+  pcLed.position.set(0.62, 1.02, 0.062);
+  station.add(pcLed);
+
+  // Teclado e Mouse
+  const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.018, 0.14), plasticDarkMat);
+  keyboard.position.set(-0.08, 0.78, 0.08);
+  station.add(keyboard);
+
+  const mouseObj = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.1), plasticDarkMat);
+  mouseObj.position.set(0.24, 0.78, 0.09);
+  station.add(mouseObj);
+
+  // Pilha de pastas / cartilhas da política no canto esquerdo
+  const folder1 = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.035, 0.32), policyMat);
+  folder1.position.set(-0.58, 0.79, 0.06);
+  folder1.rotation.y = 0.12;
+  station.add(folder1);
+
+  const folder2 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.25, 0.03, 0.31),
+    new THREE.MeshStandardMaterial({ color: '#f5efe6', roughness: 0.8 })
+  );
+  folder2.position.set(-0.58, 0.822, 0.06);
+  folder2.rotation.y = -0.08;
+  station.add(folder2);
+
+  // Caneca institucional
+  const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.038, 0.095, 12), policyMat);
+  mug.position.set(0.38, 0.818, -0.05);
+  station.add(mug);
+
+  // Cadeira giratória (posicionada em z = +0.48, voltada para -Z)
+  const chairGroup = new THREE.Group();
+  chairGroup.position.set(-0.05, 0, 0.48);
+
+  const chairBase = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.04, 12), metalMat);
+  chairBase.position.y = 0.03;
+  chairGroup.add(chairBase);
+
+  const chairPiston = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.38, 8), metalMat);
+  chairPiston.position.y = 0.22;
+  chairGroup.add(chairPiston);
+
+  const seatCushion = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.07, 0.44), chairFabricMat);
+  seatCushion.position.y = 0.44;
+  seatCushion.castShadow = true;
+  chairGroup.add(seatCushion);
+
+  const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.48, 0.06), chairFabricMat);
+  backrest.position.set(0, 0.72, 0.2);
+  backrest.rotation.x = -0.08;
+  backrest.castShadow = true;
+  chairGroup.add(backrest);
+
+  station.add(chairGroup);
+
+  return station;
+}
+
+function buildOfficeCabinetAndPlant(policy: Policy): THREE.Group {
+  const group = new THREE.Group();
+
+  // Gaveteiro / Arquivo baixo de repartição
+  const cabinetMat = new THREE.MeshStandardMaterial({ color: '#d6cbb8', roughness: 0.7 });
+  const handleMat = new THREE.MeshStandardMaterial({ color: '#3f3f46', metalness: 0.6, roughness: 0.4 });
+  const cabinet = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.92, 0.52), cabinetMat);
+  cabinet.position.set(0, 0.46, 0);
+  cabinet.castShadow = true;
+  cabinet.receiveShadow = true;
+  group.add(cabinet);
+
+  // 3 gavetas com puxadores
+  [0.2, 0.48, 0.76].forEach((gy) => {
+    const drawerFace = new THREE.Mesh(
+      new THREE.BoxGeometry(0.56, 0.22, 0.02),
+      new THREE.MeshStandardMaterial({ color: '#e7decb', roughness: 0.65 })
+    );
+    drawerFace.position.set(0, gy, 0.265);
+    group.add(drawerFace);
+
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.025, 0.03), handleMat);
+    handle.position.set(0, gy, 0.28);
+    group.add(handle);
+  });
+
+  // Caixa-arquivo colorida em cima do gaveteiro
+  const archiveBox = new THREE.Mesh(
+    new THREE.BoxGeometry(0.28, 0.32, 0.36),
+    new THREE.MeshStandardMaterial({ color: policy.color, roughness: 0.55 })
+  );
+  archiveBox.position.set(-0.1, 1.08, 0);
+  archiveBox.castShadow = true;
+  group.add(archiveBox);
+
+  // Vaso de planta ao lado do arquivo
+  const pot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2, 0.15, 0.34, 12),
+    new THREE.MeshStandardMaterial({ color: '#9a3412', roughness: 0.8 })
+  );
+  pot.position.set(0.62, 0.17, 0.04);
+  pot.castShadow = true;
+  group.add(pot);
+
+  const foliageMat = new THREE.MeshStandardMaterial({ color: '#15803d', roughness: 0.7 });
+  [
+    [0, 0.48, 0, 0],
+    [-0.07, 0.44, 0.05, 0.22],
+    [0.07, 0.45, -0.04, -0.2],
+    [0.02, 0.46, 0.07, -0.18]
+  ].forEach(([lx, ly, lz, rot]) => {
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.46, 0.02), foliageMat);
+    leaf.position.set(0.62 + lx, ly, 0.04 + lz);
+    leaf.rotation.z = rot;
+    leaf.castShadow = true;
+    group.add(leaf);
+  });
+
+  return group;
+}
+
+/**
+ * ============================================================================
+ * CONSTRUTOR DE PERSONAGEM 3D (SENTADO TRABALHANDO, CAMINHANDO E OBSERVANDO)
+ * ============================================================================
+ */
+function buildTechnicalPersonMesh(
+  seed: number,
+  policy: Policy,
+  options: { hasClipboard?: boolean; seated?: boolean } = {}
+) {
+  const { hasClipboard = false, seated = false } = options;
   const personGroup = new THREE.Group();
 
   const skinColor = SKIN_TONES[seed % SKIN_TONES.length];
@@ -846,79 +1107,117 @@ function buildTechnicalPersonMesh(seed: number, policy: Policy, hasClipboard: bo
   const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.8 });
   const accentMat = new THREE.MeshStandardMaterial({ color: policy.accent, roughness: 0.4 });
 
-  // Sombra de contato no piso
-  const shadowDisc = new THREE.Mesh(
-    new THREE.CircleGeometry(0.32, 16),
-    new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.28 })
-  );
-  shadowDisc.rotation.x = -Math.PI / 2;
-  shadowDisc.position.y = 0.02;
-  personGroup.add(shadowDisc);
+  if (!seated) {
+    const shadowDisc = new THREE.Mesh(
+      new THREE.CircleGeometry(0.32, 16),
+      new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.28 })
+    );
+    shadowDisc.rotation.x = -Math.PI / 2;
+    shadowDisc.position.y = 0.02;
+    personGroup.add(shadowDisc);
+  }
 
-  // Pernas
-  const legGeo = new THREE.BoxGeometry(0.13, 0.56, 0.14);
-  const leftLeg = new THREE.Mesh(legGeo, pantsMat);
-  leftLeg.position.set(-0.1, 0.28, 0);
-  leftLeg.castShadow = true;
-  personGroup.add(leftLeg);
+  // Pernas (em pé vs. sentadas na cadeira)
+  let leftLeg: THREE.Mesh;
+  let rightLeg: THREE.Mesh;
 
-  const rightLeg = new THREE.Mesh(legGeo, pantsMat);
-  rightLeg.position.set(0.1, 0.28, 0);
-  rightLeg.castShadow = true;
-  personGroup.add(rightLeg);
+  if (seated) {
+    // Coxas horizontais + canelas verticais
+    const thighGeo = new THREE.BoxGeometry(0.13, 0.13, 0.38);
+    const shinGeo = new THREE.BoxGeometry(0.12, 0.42, 0.13);
+
+    leftLeg = new THREE.Mesh(thighGeo, pantsMat);
+    leftLeg.position.set(-0.1, 0.48, 0.14);
+    personGroup.add(leftLeg);
+
+    const leftShin = new THREE.Mesh(shinGeo, pantsMat);
+    leftShin.position.set(-0.1, 0.25, 0.29);
+    personGroup.add(leftShin);
+
+    rightLeg = new THREE.Mesh(thighGeo, pantsMat);
+    rightLeg.position.set(0.1, 0.48, 0.14);
+    personGroup.add(rightLeg);
+
+    const rightShin = new THREE.Mesh(shinGeo, pantsMat);
+    rightShin.position.set(0.1, 0.25, 0.29);
+    personGroup.add(rightShin);
+  } else {
+    const legGeo = new THREE.BoxGeometry(0.13, 0.56, 0.14);
+    leftLeg = new THREE.Mesh(legGeo, pantsMat);
+    leftLeg.position.set(-0.1, 0.28, 0);
+    leftLeg.castShadow = true;
+    personGroup.add(leftLeg);
+
+    rightLeg = new THREE.Mesh(legGeo, pantsMat);
+    rightLeg.position.set(0.1, 0.28, 0);
+    rightLeg.castShadow = true;
+    personGroup.add(rightLeg);
+  }
+
+  const yOffset = seated ? -0.06 : 0;
 
   // Tronco
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.54, 0.22), topMat);
-  torso.position.set(0, 0.82, 0);
+  torso.position.set(0, 0.82 + yOffset, 0);
   torso.castShadow = true;
   personGroup.add(torso);
 
   // Crachá / Cordão Institucional SUS
   const badge = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.03), accentMat);
-  badge.position.set(0.09, 0.9, 0.12);
+  badge.position.set(0.09, 0.9 + yOffset, 0.12);
   personGroup.add(badge);
 
   // Cabeça
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), skinMat);
-  head.position.set(0, 1.26, 0);
+  head.position.set(0, 1.26 + yOffset, 0);
   head.castShadow = true;
   personGroup.add(head);
 
-  // Penteados variados (Black power / Coque / Corte clássico)
+  // Penteados variados
   const hairStyle = seed % 3;
   if (hairStyle === 0) {
     const afroHair = new THREE.Mesh(new THREE.SphereGeometry(0.195, 16, 16), hairMat);
-    afroHair.position.set(0, 1.31, -0.02);
+    afroHair.position.set(0, 1.31 + yOffset, -0.02);
     afroHair.castShadow = true;
     personGroup.add(afroHair);
   } else if (hairStyle === 1) {
     const capHair = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 14), hairMat);
-    capHair.position.set(0, 1.28, -0.02);
+    capHair.position.set(0, 1.28 + yOffset, -0.02);
     personGroup.add(capHair);
 
     const bun = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 12), hairMat);
-    bun.position.set(0, 1.43, -0.11);
+    bun.position.set(0, 1.43 + yOffset, -0.11);
     personGroup.add(bun);
   } else {
     const shortHair = new THREE.Mesh(new THREE.SphereGeometry(0.168, 14, 14), hairMat);
-    shortHair.position.set(0, 1.29, -0.015);
+    shortHair.position.set(0, 1.29 + yOffset, -0.015);
     personGroup.add(shortHair);
   }
 
   // Braços
-  const armGeo = new THREE.BoxGeometry(0.11, 0.46, 0.11);
+  const armGeo = new THREE.BoxGeometry(0.11, 0.44, 0.11);
   const leftArm = new THREE.Mesh(armGeo, topMat);
-  leftArm.position.set(-0.26, 0.82, 0);
-  leftArm.castShadow = true;
-  personGroup.add(leftArm);
-
   const rightArm = new THREE.Mesh(armGeo, topMat);
-  rightArm.position.set(0.26, 0.82, 0);
+
+  if (seated) {
+    // Braços estendidos na direção do teclado sobre a mesa
+    leftArm.position.set(-0.23, 0.82 + yOffset, 0.16);
+    leftArm.rotation.x = -1.05;
+    leftArm.rotation.z = -0.12;
+    rightArm.position.set(0.23, 0.82 + yOffset, 0.16);
+    rightArm.rotation.x = -1.05;
+    rightArm.rotation.z = 0.12;
+  } else {
+    leftArm.position.set(-0.26, 0.82, 0);
+    rightArm.position.set(0.26, 0.82, 0);
+  }
+  leftArm.castShadow = true;
   rightArm.castShadow = true;
+  personGroup.add(leftArm);
   personGroup.add(rightArm);
 
-  // Prancheta técnica de campo
-  if (hasClipboard) {
+  // Prancheta técnica de campo (apenas quando em pé)
+  if (hasClipboard && !seated) {
     const board = new THREE.Mesh(
       new THREE.BoxGeometry(0.2, 0.03, 0.26),
       new THREE.MeshStandardMaterial({ color: '#d97706', roughness: 0.5 })
@@ -929,15 +1228,301 @@ function buildTechnicalPersonMesh(seed: number, policy: Policy, hasClipboard: bo
     personGroup.add(board);
   }
 
-  // Hitbox invisível para facilitar o hover e clique no personagem
+  // Hitbox invisível para hover e clique
   const hitBox = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.36, 0.36, 1.55, 8),
+    new THREE.CylinderGeometry(0.4, 0.4, 1.55, 8),
     new THREE.MeshBasicMaterial({ visible: false })
   );
   hitBox.position.y = 0.78;
   personGroup.add(hitBox);
 
-  return { personGroup, leftLeg, rightLeg, leftArm, rightArm, hitBox };
+  return { personGroup, leftLeg, rightLeg, leftArm, rightArm, head, hitBox };
+}
+
+/**
+ * ============================================================================
+ * CENÁRIO EXTERNO (ESPLANADA ARBORIZADA, ORLA DO GUAÍBA E ENTORNO URBANO)
+ * ============================================================================
+ */
+function buildCityEnvironment(scene: THREE.Scene): {
+  vehicles: VehicleAgent[];
+  waterMesh: THREE.Mesh;
+} {
+  const envGroup = new THREE.Group();
+
+  // 1. Esplanada elevada de calçamento claro conectando todas as 17 salas
+  const esplanadeMat = new THREE.MeshStandardMaterial({
+    color: '#342921',
+    roughness: 0.85,
+    metalness: 0.04
+  });
+  const esplanadeDeck = new THREE.Mesh(new THREE.BoxGeometry(66, 0.12, 54), esplanadeMat);
+  esplanadeDeck.position.set(0, 0.01, 0);
+  esplanadeDeck.receiveShadow = true;
+  envGroup.add(esplanadeDeck);
+
+  // Moldura arquitetônica dourada/terracota da esplanada
+  const borderMat = new THREE.MeshStandardMaterial({ color: '#7c5836', roughness: 0.65 });
+  const borderTop = new THREE.Mesh(new THREE.BoxGeometry(66.8, 0.16, 0.6), borderMat);
+  borderTop.position.set(0, 0.03, -27.2);
+  envGroup.add(borderTop);
+
+  const borderBottom = new THREE.Mesh(new THREE.BoxGeometry(66.8, 0.16, 0.6), borderMat);
+  borderBottom.position.set(0, 0.03, 27.2);
+  envGroup.add(borderBottom);
+
+  const borderLeft = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.16, 54.8), borderMat);
+  borderLeft.position.set(-33.2, 0.03, 0);
+  envGroup.add(borderLeft);
+
+  const borderRight = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.16, 54.8), borderMat);
+  borderRight.position.set(33.2, 0.03, 0);
+  envGroup.add(borderRight);
+
+  // 2. Canteiros verdes e árvores estilizadas (Ipês amarelos, roxos e figueiras)
+  const grassMat = new THREE.MeshStandardMaterial({ color: '#1f3a29', roughness: 0.9 });
+  const trunkMat = new THREE.MeshStandardMaterial({ color: '#4a3222', roughness: 0.85 });
+  const crownColors = ['#15803d', '#166534', '#ca8a04', '#7e22ce', '#0f766e'];
+
+  function addTree(x: number, z: number, scale: number, colorIdx: number) {
+    const tree = new THREE.Group();
+    tree.position.set(x, 0.08, z);
+
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14 * scale, 0.22 * scale, 1.6 * scale, 7),
+      trunkMat
+    );
+    trunk.position.y = 0.8 * scale;
+    trunk.castShadow = true;
+    tree.add(trunk);
+
+    const crownMat = new THREE.MeshStandardMaterial({
+      color: crownColors[colorIdx % crownColors.length],
+      roughness: 0.78
+    });
+
+    const mainCrown = new THREE.Mesh(new THREE.DodecahedronGeometry(1.15 * scale, 1), crownMat);
+    mainCrown.position.y = 2.15 * scale;
+    mainCrown.castShadow = true;
+    tree.add(mainCrown);
+
+    const subCrown = new THREE.Mesh(new THREE.DodecahedronGeometry(0.8 * scale, 1), crownMat);
+    subCrown.position.set(0.45 * scale, 1.85 * scale, 0.35 * scale);
+    subCrown.castShadow = true;
+    tree.add(subCrown);
+
+    envGroup.add(tree);
+  }
+
+  // Canteiros arborizados nos vãos e ao redor da esplanada
+  const planterCoords: [number, number, number, number][] = [
+    [-31, -24, 1.15, 2], [-31, -12, 1.0, 0], [-31, 0, 1.2, 3], [-31, 12, 0.95, 1], [-31, 24, 1.1, 0],
+    [31, -24, 1.1, 3], [31, -12, 1.05, 0], [31, 0, 1.15, 2], [31, 12, 1.0, 1], [31, 24, 1.15, 0],
+    [-20, -25.2, 1.0, 0], [-8, -25.2, 1.1, 2], [8, -25.2, 1.05, 1], [20, -25.2, 1.15, 3],
+    [-20, 25.2, 1.1, 1], [-8, 25.2, 0.95, 3], [8, 25.2, 1.15, 0], [20, 25.2, 1.05, 2],
+    // Bosques externos
+    [-42, -30, 1.35, 0], [-45, -8, 1.25, 2], [-41, 16, 1.3, 1], [-38, 34, 1.2, 3],
+    [42, -28, 1.3, 1], [44, 6, 1.25, 0], [40, 28, 1.35, 2],
+    [-16, 34, 1.25, 0], [0, 35, 1.3, 2], [18, 34, 1.2, 3]
+  ];
+
+  planterCoords.forEach(([px, pz, sc, cIdx]) => {
+    const planter = new THREE.Mesh(new THREE.CylinderGeometry(1.4 * sc, 1.5 * sc, 0.14, 12), grassMat);
+    planter.position.set(px, 0.08, pz);
+    planter.receiveShadow = true;
+    envGroup.add(planter);
+    addTree(px, pz, sc, cIdx);
+  });
+
+  // 3. Bancos de praça e postes de luz quente na esplanada
+  const benchWoodMat = new THREE.MeshStandardMaterial({ color: '#92400e', roughness: 0.7 });
+  const lampPostMat = new THREE.MeshStandardMaterial({ color: '#1f2937', metalness: 0.7, roughness: 0.3 });
+  const lampBulbMat = new THREE.MeshBasicMaterial({ color: '#fde68a' });
+
+  [
+    [-12.2, 0, Math.PI / 2],
+    [12.2, 0, -Math.PI / 2],
+    [0, -11.5, 0],
+    [0, 11.5, Math.PI],
+    [-24.5, 24.5, Math.PI / 4],
+    [24.5, 24.5, -Math.PI / 4]
+  ].forEach(([bx, bz, rotY]) => {
+    const bench = new THREE.Group();
+    bench.position.set(bx, 0.08, bz);
+    bench.rotation.y = rotY;
+
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.52), benchWoodMat);
+    seat.position.y = 0.42;
+    seat.castShadow = true;
+    bench.add(seat);
+
+    const back = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.42, 0.07), benchWoodMat);
+    back.position.set(0, 0.66, -0.22);
+    back.rotation.x = -0.15;
+    bench.add(back);
+
+    [-0.75, 0.75].forEach((lx) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.42, 0.48), lampPostMat);
+      leg.position.set(lx, 0.21, 0);
+      bench.add(leg);
+    });
+
+    envGroup.add(bench);
+  });
+
+  // Postes de iluminação na borda da esplanada
+  [
+    [-32.4, -18], [-32.4, 18], [32.4, -18], [32.4, 18],
+    [-16, -26.4], [16, -26.4], [-16, 26.4], [16, 26.4]
+  ].forEach(([lx, lz]) => {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 3.4, 8), lampPostMat);
+    post.position.set(lx, 1.75, lz);
+    post.castShadow = true;
+    envGroup.add(post);
+
+    const globe = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), lampBulbMat);
+    globe.position.set(lx, 3.55, lz);
+    envGroup.add(globe);
+  });
+
+  // 4. Orla do Guaíba (faixa d'água e calçadão ao norte/oeste do pavilhão)
+  const waterMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(240, 85),
+    new THREE.MeshStandardMaterial({
+      color: '#0f293a',
+      roughness: 0.22,
+      metalness: 0.65
+    })
+  );
+  waterMesh.rotation.x = -Math.PI / 2;
+  waterMesh.position.set(0, -0.03, -84);
+  envGroup.add(waterMesh);
+
+  // Calçadão da Orla
+  const boardwalk = new THREE.Mesh(
+    new THREE.BoxGeometry(240, 0.14, 4.2),
+    new THREE.MeshStandardMaterial({ color: '#574637', roughness: 0.8 })
+  );
+  boardwalk.position.set(0, 0.03, -40.5);
+  boardwalk.receiveShadow = true;
+  envGroup.add(boardwalk);
+
+  // 5. Avenida Perimetral e Veículos Institucional/Urbano
+  const roadMat = new THREE.MeshStandardMaterial({ color: '#18181b', roughness: 0.9 });
+  const roadZ = new THREE.Mesh(new THREE.PlaneGeometry(240, 7.2), roadMat);
+  roadZ.rotation.x = -Math.PI / 2;
+  roadZ.position.set(0, -0.01, -34.2);
+  envGroup.add(roadZ);
+
+  const roadX = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 240), roadMat);
+  roadX.rotation.x = -Math.PI / 2;
+  roadX.position.set(52, -0.01, 0);
+  envGroup.add(roadX);
+
+  // Faixas tracejadas da avenida
+  const dashMat = new THREE.MeshBasicMaterial({ color: '#eab308' });
+  for (let x = -110; x <= 110; x += 6) {
+    const dash = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.18), dashMat);
+    dash.rotation.x = -Math.PI / 2;
+    dash.position.set(x, 0.01, -34.2);
+    envGroup.add(dash);
+  }
+
+  // 6. Silhueta urbana institucional de Porto Alegre (prédios low-poly distantes)
+  const buildingMat1 = new THREE.MeshStandardMaterial({ color: '#27221e', roughness: 0.85 });
+  const buildingMat2 = new THREE.MeshStandardMaterial({ color: '#312923', roughness: 0.8 });
+  const windowLitMat = new THREE.MeshBasicMaterial({ color: '#fbbf24' });
+
+  const cityBlocks: [number, number, number, number, number][] = [
+    [66, -24, 8, 14, 8], [68, -6, 9, 20, 10], [65, 14, 8, 12, 9], [67, 32, 10, 16, 8],
+    [42, 48, 11, 13, 8], [22, 50, 9, 18, 9], [-4, 52, 12, 15, 8], [-28, 49, 10, 14, 9],
+    [-56, 26, 9, 17, 9], [-58, 4, 8, 13, 8], [-55, -20, 10, 19, 9]
+  ];
+
+  cityBlocks.forEach(([bx, bz, bw, bh, bd], idx) => {
+    const bGroup = new THREE.Group();
+    bGroup.position.set(bx, bh / 2 - 0.05, bz);
+
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(bw, bh, bd),
+      idx % 2 === 0 ? buildingMat1 : buildingMat2
+    );
+    body.castShadow = true;
+    bGroup.add(body);
+
+    // Pequenas janelas iluminadas nas fachadas
+    for (let wy = -bh / 2 + 2.2; wy < bh / 2 - 1.5; wy += 2.6) {
+      for (let wx = -bw / 2 + 1.5; wx < bw / 2 - 1.2; wx += 2.2) {
+        if ((Math.abs(Math.round(wx + wy)) + idx) % 3 === 0) {
+          const win = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 0.85), windowLitMat);
+          win.position.set(wx, wy, bd / 2 + 0.02);
+          bGroup.add(win);
+        }
+      }
+    }
+
+    envGroup.add(bGroup);
+  });
+
+  // 7. Veículos circulando na avenida (Ônibus e carros da rede municipal)
+  const vehicles: VehicleAgent[] = [];
+  const vehicleConfigs: {
+    axis: 'x' | 'z';
+    dir: 1 | -1;
+    lane: number;
+    start: number;
+    speed: number;
+    color: string;
+    isBus: boolean;
+  }[] = [
+    { axis: 'x', dir: 1, lane: -32.6, start: -70, speed: 6.5, color: '#0284c7', isBus: true },
+    { axis: 'x', dir: -1, lane: -35.8, start: 60, speed: 8.2, color: '#f5f0e6', isBus: false },
+    { axis: 'x', dir: 1, lane: -32.6, start: 15, speed: 7.4, color: '#d97706', isBus: false },
+    { axis: 'z', dir: 1, lane: 50.4, start: -65, speed: 7.8, color: '#16a34a', isBus: true },
+    { axis: 'z', dir: -1, lane: 53.6, start: 55, speed: 8.8, color: '#e11d48', isBus: false }
+  ];
+
+  vehicleConfigs.forEach((cfg) => {
+    const vGroup = new THREE.Group();
+    const bodyLen = cfg.isBus ? 4.4 : 2.3;
+    const bodyH = cfg.isBus ? 1.45 : 0.85;
+    const bodyW = cfg.isBus ? 1.25 : 1.05;
+
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(bodyW, bodyH, bodyLen),
+      new THREE.MeshStandardMaterial({ color: cfg.color, roughness: 0.4 })
+    );
+    body.position.y = bodyH / 2 + 0.25;
+    body.castShadow = true;
+    vGroup.add(body);
+
+    const roof = new THREE.Mesh(
+      new THREE.BoxGeometry(bodyW * 0.92, 0.14, bodyLen * 0.85),
+      new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.5 })
+    );
+    roof.position.y = bodyH + 0.3;
+    vGroup.add(roof);
+
+    if (cfg.axis === 'x') {
+      vGroup.position.set(cfg.start, 0, cfg.lane);
+      vGroup.rotation.y = cfg.dir === 1 ? Math.PI / 2 : -Math.PI / 2;
+    } else {
+      vGroup.position.set(cfg.lane, 0, cfg.start);
+      vGroup.rotation.y = cfg.dir === 1 ? 0 : Math.PI;
+    }
+
+    envGroup.add(vGroup);
+    vehicles.push({
+      group: vGroup,
+      axis: cfg.axis,
+      dir: cfg.dir,
+      speed: cfg.speed,
+      limit: 110
+    });
+  });
+
+  scene.add(envGroup);
+  return { vehicles, waterMesh };
 }
 
 /**
@@ -997,7 +1582,6 @@ export default function PavilhaoCPPSPage() {
     addFrameToRoom: null
   });
 
-  // Hidratação segura no cliente (evita erro SSR de document/window)
   useEffect(() => {
     if (window.innerWidth < 768) {
       setSidebarOpen(false);
@@ -1013,7 +1597,6 @@ export default function PavilhaoCPPSPage() {
     );
   }, []);
 
-  // Alterna visibilidade das equipes técnicas 3D
   useEffect(() => {
     if (visitorsGroupRef.current) {
       visitorsGroupRef.current.visible = showVisitors;
@@ -1129,7 +1712,7 @@ export default function PavilhaoCPPSPage() {
 
   /**
    * ============================================================================
-   * INICIALIZAÇÃO DO MUNDO 3D ISOMÉTRICO (THREE.JS + ORBITCONTROLS + AGENTES)
+   * INICIALIZAÇÃO DO MUNDO 3D ISOMÉTRICO (THREE.JS + REPARTIÇÃO + ENTORNO)
    * ============================================================================
    */
   useEffect(() => {
@@ -1138,7 +1721,7 @@ export default function PavilhaoCPPSPage() {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#1c1713');
-    scene.fog = new THREE.FogExp2('#1c1713', 0.0045);
+    scene.fog = new THREE.FogExp2('#1c1713', 0.0042);
 
     const aspect = window.innerWidth / window.innerHeight;
     const frustumSize = 56;
@@ -1167,8 +1750,8 @@ export default function PavilhaoCPPSPage() {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.07;
-    controls.minZoom = 0.45;
-    controls.maxZoom = 3.6;
+    controls.minZoom = 0.42;
+    controls.maxZoom = 3.8;
     controls.maxPolarAngle = Math.PI / 2.25;
     controls.minPolarAngle = 0.25;
     controls.screenSpacePanning = true;
@@ -1178,17 +1761,17 @@ export default function PavilhaoCPPSPage() {
       setIsAutoTour(false);
     });
 
-    const ambientLight = new THREE.AmbientLight('#f7e8d4', 0.68);
+    const ambientLight = new THREE.AmbientLight('#f7e8d4', 0.72);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight('#fff1dc', 0.78);
+    const dirLight = new THREE.DirectionalLight('#fff1dc', 0.8);
     dirLight.position.set(42, 68, 34);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
     dirLight.shadow.mapSize.height = 2048;
     dirLight.shadow.camera.near = 10;
     dirLight.shadow.camera.far = 180;
-    const dShadow = 58;
+    const dShadow = 62;
     dirLight.shadow.camera.left = -dShadow;
     dirLight.shadow.camera.right = dShadow;
     dirLight.shadow.camera.top = dShadow;
@@ -1196,22 +1779,21 @@ export default function PavilhaoCPPSPage() {
     dirLight.shadow.bias = -0.0005;
     scene.add(dirLight);
 
-    const fillLight = new THREE.DirectionalLight('#9ec5d6', 0.28);
+    const fillLight = new THREE.DirectionalLight('#9ec5d6', 0.3);
     fillLight.position.set(-45, 30, -40);
     scene.add(fillLight);
 
     const groundPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(240, 240),
-      new THREE.MeshStandardMaterial({ color: '#241d18', roughness: 0.92, metalness: 0.05 })
+      new THREE.PlaneGeometry(260, 260),
+      new THREE.MeshStandardMaterial({ color: '#211b16', roughness: 0.92, metalness: 0.05 })
     );
     groundPlane.rotation.x = -Math.PI / 2;
     groundPlane.position.y = -0.05;
     groundPlane.receiveShadow = true;
     scene.add(groundPlane);
 
-    const gridHelper = new THREE.GridHelper(160, 40, '#4a3b2c', '#2e251e');
-    gridHelper.position.y = -0.02;
-    scene.add(gridHelper);
+    // Constrói esplanada, árvores, bancos, orla do Guaíba e avenida urbana
+    const { vehicles, waterMesh } = buildCityEnvironment(scene);
 
     const wallMaterial = new THREE.MeshStandardMaterial({ color: '#e6dac8', roughness: 0.85, metalness: 0.02 });
     const woodTrimMaterial = new THREE.MeshStandardMaterial({ color: '#3a281c', roughness: 0.6, metalness: 0.1 });
@@ -1375,6 +1957,27 @@ export default function PavilhaoCPPSPage() {
       roomLight.position.set(0.5, 3.8, 0.5);
       roomGroup.add(roomLight);
 
+      // Mobiliário de repartição dentro de cada sala (sem bloquear os portais centrais)
+      // Estação 1: Quadrante sudeste da sala
+      const workstation1 = buildOfficeWorkstation(policy, index * 3 + 1);
+      workstation1.position.set(2.85, 0.16, 2.65);
+      workstation1.rotation.y = -Math.PI / 5;
+      roomGroup.add(workstation1);
+
+      // Estação 2 nas salas pares: Quadrante nordeste da sala
+      if (index % 2 === 0) {
+        const workstation2 = buildOfficeWorkstation(policy, index * 3 + 2);
+        workstation2.position.set(3.15, 0.16, -2.55);
+        workstation2.rotation.y = -Math.PI / 2.3;
+        roomGroup.add(workstation2);
+      }
+
+      // Gaveteiro / arquivo e vaso de planta no quadrante sudoeste
+      const cabinetAndPlant = buildOfficeCabinetAndPlant(policy);
+      cabinetAndPlant.position.set(-3.35, 0.16, 3.85);
+      cabinetAndPlant.rotation.y = Math.PI / 2;
+      roomGroup.add(cabinetAndPlant);
+
       policy.photos.forEach((photo, pIdx) => {
         createFramedArtwork(policy, photo, pIdx, roomGroup);
       });
@@ -1466,7 +2069,7 @@ export default function PavilhaoCPPSPage() {
 
     /**
      * ========================================================================
-     * POPULAÇÃO DE EQUIPES TÉCNICAS E VISITANTES (CAMINHANDO E OBSERVANDO)
+     * POPULAÇÃO DE EQUIPES TÉCNICAS (TRABALHANDO NAS MESAS, OBSERVANDO E CAMINHANDO)
      * ========================================================================
      */
     const visitorsGroup = new THREE.Group();
@@ -1474,67 +2077,140 @@ export default function PavilhaoCPPSPage() {
     const visitorAgents: VisitorAgent[] = [];
     const visitorHitMeshes: THREE.Object3D[] = [];
 
-    // 1. Observadores parados dentro de cada uma das 17 salas olhando para os quadros
     roomObjects.forEach((room, rIdx) => {
-      const observersInRoom = rIdx % 2 === 0 ? 2 : 1;
-      for (let k = 0; k < observersInRoom; k++) {
-        const seed = rIdx * 7 + k * 3 + 1;
-        const { personGroup, leftLeg, rightLeg, leftArm, rightArm, hitBox } = buildTechnicalPersonMesh(
-          seed,
-          room.policy,
-          k === 0
+      // A. Trabalhador(a) sentado(a) na Estação 1 digitando no computador
+      const worker1Seed = rIdx * 11 + 2;
+      const worker1 = buildTechnicalPersonMesh(worker1Seed, room.policy, { seated: true });
+      const w1DeskOffset = new THREE.Vector3(2.85, 0.16, 2.65);
+      const w1Rot = -Math.PI / 5;
+      // Posição da cadeira (0, 0, +0.44) rotacionada e somada ao centro da mesa
+      const w1ChairLocal = new THREE.Vector3(-0.05, 0, 0.44).applyAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        w1Rot
+      );
+      const w1WorldPos = room.center.clone().add(w1DeskOffset).add(w1ChairLocal);
+      worker1.personGroup.position.copy(w1WorldPos);
+      // Olhando para o monitor (-Z local da mesa => w1Rot + Math.PI)
+      worker1.personGroup.rotation.y = w1Rot + Math.PI;
+
+      const roleTitle1 = TECHNICAL_ROLES[rIdx % TECHNICAL_ROLES.length];
+      worker1.hitBox.userData = {
+        type: 'visitor',
+        policyIndex: rIdx,
+        policy: room.policy,
+        roleTitle: roleTitle1,
+        actionLabel: 'Monitorando indicadores e planos territoriais'
+      };
+      visitorsGroup.add(worker1.personGroup);
+      visitorHitMeshes.push(worker1.hitBox);
+
+      visitorAgents.push({
+        group: worker1.personGroup,
+        leftLeg: worker1.leftLeg,
+        rightLeg: worker1.rightLeg,
+        leftArm: worker1.leftArm,
+        rightArm: worker1.rightArm,
+        head: worker1.head,
+        mode: 'work',
+        roomIndex: rIdx,
+        nextRoomIndex: rIdx,
+        progress: 0,
+        speed: 0,
+        phase: worker1Seed * 1.1,
+        basePos: w1WorldPos.clone(),
+        baseRotY: w1Rot + Math.PI,
+        roleTitle: roleTitle1,
+        policy: room.policy
+      });
+
+      // B. Trabalhador(a) na Estação 2 (nas salas pares)
+      if (rIdx % 2 === 0) {
+        const worker2Seed = rIdx * 11 + 5;
+        const worker2 = buildTechnicalPersonMesh(worker2Seed, room.policy, { seated: true });
+        const w2DeskOffset = new THREE.Vector3(3.15, 0.16, -2.55);
+        const w2Rot = -Math.PI / 2.3;
+        const w2ChairLocal = new THREE.Vector3(-0.05, 0, 0.44).applyAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          w2Rot
         );
+        const w2WorldPos = room.center.clone().add(w2DeskOffset).add(w2ChairLocal);
+        worker2.personGroup.position.copy(w2WorldPos);
+        worker2.personGroup.rotation.y = w2Rot + Math.PI;
 
-        // Posicionados diante das paredes de exposição (esquerda ou fundo)
-        const isFacingLeftWall = k === 0;
-        const localOffset = isFacingLeftWall
-          ? new THREE.Vector3(-2.6, 0.16, -2.5 + (rIdx % 3) * 0.45)
-          : new THREE.Vector3(2.4, 0.16, -2.6);
-
-        const worldPos = room.center.clone().add(localOffset);
-        personGroup.position.copy(worldPos);
-
-        // Rotaciona o olhar na direção do quadro
-        const lookTarget = isFacingLeftWall
-          ? room.center.clone().add(new THREE.Vector3(-ROOM_SIZE / 2, 0.16, -3.1))
-          : room.center.clone().add(new THREE.Vector3(3.1, 0.16, -ROOM_SIZE / 2));
-
-        const angleToArt = Math.atan2(lookTarget.x - worldPos.x, lookTarget.z - worldPos.z);
-        personGroup.rotation.y = angleToArt;
-
-        const roleTitle = TECHNICAL_ROLES[(rIdx + k) % TECHNICAL_ROLES.length];
-        hitBox.userData = {
+        const roleTitle2 = TECHNICAL_ROLES[(rIdx + 2) % TECHNICAL_ROLES.length];
+        worker2.hitBox.userData = {
           type: 'visitor',
           policyIndex: rIdx,
           policy: room.policy,
-          roleTitle,
-          actionLabel: 'Analisando acervo territorial na sala'
+          roleTitle: roleTitle2,
+          actionLabel: 'Articulando ações com as Gerências Distritais'
         };
-
-        visitorsGroup.add(personGroup);
-        visitorHitMeshes.push(hitBox);
+        visitorsGroup.add(worker2.personGroup);
+        visitorHitMeshes.push(worker2.hitBox);
 
         visitorAgents.push({
-          group: personGroup,
-          leftLeg,
-          rightLeg,
-          leftArm,
-          rightArm,
-          mode: 'observe',
+          group: worker2.personGroup,
+          leftLeg: worker2.leftLeg,
+          rightLeg: worker2.rightLeg,
+          leftArm: worker2.leftArm,
+          rightArm: worker2.rightArm,
+          head: worker2.head,
+          mode: 'work',
           roomIndex: rIdx,
-          nextRoomIndex: (rIdx + 1) % roomObjects.length,
+          nextRoomIndex: rIdx,
           progress: 0,
           speed: 0,
-          phase: seed * 1.3,
-          basePos: worldPos.clone(),
-          baseRotY: angleToArt,
-          roleTitle,
+          phase: worker2Seed * 1.4,
+          basePos: w2WorldPos.clone(),
+          baseRotY: w2Rot + Math.PI,
+          roleTitle: roleTitle2,
           policy: room.policy
         });
       }
+
+      // C. Observador(a) em pé diante dos quadros
+      const obsSeed = rIdx * 7 + 1;
+      const obs = buildTechnicalPersonMesh(obsSeed, room.policy, { hasClipboard: true });
+      const localOffset = new THREE.Vector3(-2.6, 0.16, -2.5 + (rIdx % 3) * 0.45);
+      const worldPos = room.center.clone().add(localOffset);
+      obs.personGroup.position.copy(worldPos);
+
+      const lookTarget = room.center.clone().add(new THREE.Vector3(-ROOM_SIZE / 2, 0.16, -3.1));
+      const angleToArt = Math.atan2(lookTarget.x - worldPos.x, lookTarget.z - worldPos.z);
+      obs.personGroup.rotation.y = angleToArt;
+
+      const obsRole = TECHNICAL_ROLES[(rIdx + 1) % TECHNICAL_ROLES.length];
+      obs.hitBox.userData = {
+        type: 'visitor',
+        policyIndex: rIdx,
+        policy: room.policy,
+        roleTitle: obsRole,
+        actionLabel: 'Analisando acervo territorial na sala'
+      };
+      visitorsGroup.add(obs.personGroup);
+      visitorHitMeshes.push(obs.hitBox);
+
+      visitorAgents.push({
+        group: obs.personGroup,
+        leftLeg: obs.leftLeg,
+        rightLeg: obs.rightLeg,
+        leftArm: obs.leftArm,
+        rightArm: obs.rightArm,
+        head: obs.head,
+        mode: 'observe',
+        roomIndex: rIdx,
+        nextRoomIndex: (rIdx + 1) % roomObjects.length,
+        progress: 0,
+        speed: 0,
+        phase: obsSeed * 1.3,
+        basePos: worldPos.clone(),
+        baseRotY: angleToArt,
+        roleTitle: obsRole,
+        policy: room.policy
+      });
     });
 
-    // 2. Equipes caminhando pelas passarelas luminosas entre as 17 salas
+    // D. Equipes caminhando pelas passarelas luminosas entre as 17 salas
     const numWalkers = 10;
     for (let w = 0; w < numWalkers; w++) {
       const startRoomIdx = (w * 2) % roomObjects.length;
@@ -1542,14 +2218,9 @@ export default function PavilhaoCPPSPage() {
       const policy = roomObjects[startRoomIdx].policy;
       const seed = 100 + w * 5;
 
-      const { personGroup, leftLeg, rightLeg, leftArm, rightArm, hitBox } = buildTechnicalPersonMesh(
-        seed,
-        policy,
-        w % 2 === 1
-      );
-
+      const walker = buildTechnicalPersonMesh(seed, policy, { hasClipboard: w % 2 === 1 });
       const roleTitle = TECHNICAL_ROLES[w % TECHNICAL_ROLES.length];
-      hitBox.userData = {
+      walker.hitBox.userData = {
         type: 'visitor',
         policyIndex: startRoomIdx,
         policy,
@@ -1557,15 +2228,16 @@ export default function PavilhaoCPPSPage() {
         actionLabel: 'Em deslocamento pelo circuito das políticas'
       };
 
-      visitorsGroup.add(personGroup);
-      visitorHitMeshes.push(hitBox);
+      visitorsGroup.add(walker.personGroup);
+      visitorHitMeshes.push(walker.hitBox);
 
       visitorAgents.push({
-        group: personGroup,
-        leftLeg,
-        rightLeg,
-        leftArm,
-        rightArm,
+        group: walker.personGroup,
+        leftLeg: walker.leftLeg,
+        rightLeg: walker.rightLeg,
+        leftArm: walker.leftArm,
+        rightArm: walker.rightArm,
+        head: walker.head,
         mode: 'walk',
         roomIndex: startRoomIdx,
         nextRoomIndex: nextRoomIdx,
@@ -1579,41 +2251,41 @@ export default function PavilhaoCPPSPage() {
       });
     }
 
-    // 3. Pequeno grupo reunido próximo ao Telão do Pátio Central
+    // E. Pessoas no Pátio Central e na Esplanada externa
     [
       { pos: new THREE.Vector3(2.8, 0.22, 3.1), target: new THREE.Vector3(0, 0.22, 0), seed: 201 },
-      { pos: new THREE.Vector3(3.4, 0.22, 2.2), target: new THREE.Vector3(0, 0.22, 0), seed: 202 }
+      { pos: new THREE.Vector3(3.4, 0.22, 2.2), target: new THREE.Vector3(0, 0.22, 0), seed: 202 },
+      { pos: new THREE.Vector3(-12.2, 0.08, 1.4), target: new THREE.Vector3(-12.2, 0.08, 0), seed: 203 },
+      { pos: new THREE.Vector3(12.2, 0.08, -1.4), target: new THREE.Vector3(12.2, 0.08, 0), seed: 204 }
     ].forEach((plazaVisitor, idx) => {
       const pol = INITIAL_POLICIES[idx];
-      const { personGroup, leftLeg, rightLeg, leftArm, rightArm, hitBox } = buildTechnicalPersonMesh(
-        plazaVisitor.seed,
-        pol,
-        idx === 0
-      );
-      personGroup.position.copy(plazaVisitor.pos);
+      const v = buildTechnicalPersonMesh(plazaVisitor.seed, pol, { hasClipboard: idx === 0 });
+      v.personGroup.position.copy(plazaVisitor.pos);
       const rot = Math.atan2(
         plazaVisitor.target.x - plazaVisitor.pos.x,
         plazaVisitor.target.z - plazaVisitor.pos.z
       );
-      personGroup.rotation.y = rot;
+      v.personGroup.rotation.y = rot;
 
-      hitBox.userData = {
+      v.hitBox.userData = {
         type: 'visitor',
         policyIndex: -2,
         policy: pol,
-        roleTitle: 'Coordenação CPPS / DAPS POA',
-        actionLabel: 'Acompanhando painel geral no pátio central'
+        roleTitle: idx < 2 ? 'Coordenação CPPS / DAPS POA' : 'Equipe Territorial • SMS POA',
+        actionLabel:
+          idx < 2 ? 'Acompanhando painel geral no pátio central' : 'Conversando na esplanada do pavilhão'
       };
 
-      visitorsGroup.add(personGroup);
-      visitorHitMeshes.push(hitBox);
+      visitorsGroup.add(v.personGroup);
+      visitorHitMeshes.push(v.hitBox);
 
       visitorAgents.push({
-        group: personGroup,
-        leftLeg,
-        rightLeg,
-        leftArm,
-        rightArm,
+        group: v.personGroup,
+        leftLeg: v.leftLeg,
+        rightLeg: v.rightLeg,
+        leftArm: v.leftArm,
+        rightArm: v.rightArm,
+        head: v.head,
         mode: 'observe',
         roomIndex: 0,
         nextRoomIndex: 1,
@@ -1622,7 +2294,7 @@ export default function PavilhaoCPPSPage() {
         phase: idx * 1.9,
         basePos: plazaVisitor.pos.clone(),
         baseRotY: rot,
-        roleTitle: 'Coordenação CPPS / DAPS POA',
+        roleTitle: idx < 2 ? 'Coordenação CPPS / DAPS POA' : 'Equipe Territorial • SMS POA',
         policy: pol
       });
     });
@@ -1901,6 +2573,7 @@ export default function PavilhaoCPPSPage() {
       animFrameId = requestAnimationFrame(animate);
       const dt = Math.min((now - prevTime) / 1000, 0.1);
       prevTime = now;
+      const tSec = now * 0.001;
 
       renderSummaryFrame(now);
 
@@ -1909,9 +2582,25 @@ export default function PavilhaoCPPSPage() {
         (strip.material as THREE.MeshBasicMaterial).opacity = pulseOpacity;
       });
 
-      // Animação dos personagens (caminhada nas passarelas + contemplação nas salas)
+      // Reflexo suave nas águas do Guaíba
+      (waterMesh.material as THREE.MeshStandardMaterial).roughness =
+        0.2 + Math.sin(tSec * 1.4) * 0.04;
+
+      // Movimentação dos veículos na avenida perimetral
+      vehicles.forEach((v) => {
+        if (v.axis === 'x') {
+          v.group.position.x += v.dir * v.speed * dt;
+          if (v.dir === 1 && v.group.position.x > v.limit) v.group.position.x = -v.limit;
+          if (v.dir === -1 && v.group.position.x < -v.limit) v.group.position.x = v.limit;
+        } else {
+          v.group.position.z += v.dir * v.speed * dt;
+          if (v.dir === 1 && v.group.position.z > v.limit) v.group.position.z = -v.limit;
+          if (v.dir === -1 && v.group.position.z < -v.limit) v.group.position.z = v.limit;
+        }
+      });
+
+      // Animação dos personagens (trabalhando nos computadores, caminhando e observando)
       if (visitorsGroup.visible) {
-        const tSec = now * 0.001;
         visitorAgents.forEach((agent) => {
           if (agent.mode === 'walk') {
             agent.progress += agent.speed * dt;
@@ -1943,8 +2632,14 @@ export default function PavilhaoCPPSPage() {
             agent.rightLeg.rotation.x = -stride * 0.45;
             agent.leftArm.rotation.x = -stride * 0.35;
             agent.rightArm.rotation.x = stride * 0.35;
+          } else if (agent.mode === 'work') {
+            // Técnico digitando no computador e consultando a tela
+            const typing = Math.sin(tSec * 14 + agent.phase);
+            agent.leftArm.rotation.x = -1.05 + typing * 0.09;
+            agent.rightArm.rotation.x = -1.05 - typing * 0.09;
+            agent.group.rotation.y = agent.baseRotY + Math.sin(tSec * 1.1 + agent.phase) * 0.08;
           } else {
-            // Observador: leve balanço natural e movimento de cabeça/braço comentando a fotografia
+            // Observador em pé
             const idleWave = Math.sin(tSec * 1.8 + agent.phase);
             agent.group.rotation.y = agent.baseRotY + idleWave * 0.14;
             agent.group.position.y = agent.basePos.y + Math.sin(tSec * 2.4 + agent.phase) * 0.012;
@@ -2359,7 +3054,7 @@ export default function PavilhaoCPPSPage() {
 
         <p className="text-xs text-stone-200/90 leading-relaxed bg-stone-950/45 rounded-xl px-3 py-2 border border-stone-200/10">
           {activeIndex === -1
-            ? 'Todas as 17 salas são interligadas por portais e passarelas luminosas percorridas pelas equipes técnicas. Clique em qualquer ala, pessoa, quadro ou no Telão Central.'
+            ? 'Todas as 17 salas contam com estações de trabalho da gestão e são interligadas por passarelas percorridas pelas equipes técnicas na esplanada arborizada junto à Orla.'
             : activeIndex === -2
             ? 'Síntese da Coordenação de Políticas Públicas de Saúde (CPPS/DAPS): promovendo equidade, acesso universal e cuidado integral nos territórios.'
             : activePolicy?.directive}
