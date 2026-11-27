@@ -23,11 +23,6 @@ import {
   Users
 } from 'lucide-react';
 
-/**
- * ============================================================================
- * TIPAGEM TYPESCRIPT
- * ============================================================================
- */
 interface PhotoItem {
   title: string;
   territory: string;
@@ -103,11 +98,6 @@ interface SceneObjectsState {
   addFrameToRoom: ((policyIdx: number, policyObj: Policy, photoObj: PhotoItem, slotIdx: number) => void) | null;
 }
 
-/**
- * ============================================================================
- * DADOS DAS 17 POLÍTICAS PÚBLICAS DE SAÚDE (CPPS / DAPS / SMS PORTO ALEGRE)
- * ============================================================================
- */
 const INITIAL_POLICIES: Policy[] = [
   {
     id: 'pop-negra',
@@ -621,11 +611,6 @@ const TECHNICAL_ROLES = [
   'Apoio Matricial • Atenção Primária'
 ];
 
-/**
- * ============================================================================
- * FUNÇÕES GERADORAS DE TEXTURAS PROCEDURAIS (CANVAS 2D)
- * ============================================================================
- */
 function createFloorTexture(policy: Policy): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
@@ -771,11 +756,9 @@ function createMonitorScreenTexture(policy: Policy, seed: number): THREE.CanvasT
   canvas.height = 160;
   const ctx = canvas.getContext('2d')!;
 
-  // Fundo estilo sistema de gestão / e-SUS / painel de indicadores
   ctx.fillStyle = '#0f172a';
   ctx.fillRect(0, 0, 256, 160);
 
-  // Barra superior
   ctx.fillStyle = policy.color;
   ctx.fillRect(0, 0, 256, 22);
 
@@ -783,7 +766,6 @@ function createMonitorScreenTexture(policy: Policy, seed: number): THREE.CanvasT
   ctx.font = 'bold 10px sans-serif';
   ctx.fillText(`SMS POA • ${policy.number} ${policy.shortTitle.slice(0, 16)}`, 8, 14);
 
-  // Sidebar simulada
   ctx.fillStyle = '#1e293b';
   ctx.fillRect(0, 22, 52, 138);
   for (let i = 0; i < 5; i++) {
@@ -791,12 +773,10 @@ function createMonitorScreenTexture(policy: Policy, seed: number): THREE.CanvasT
     ctx.fillRect(8, 32 + i * 20, 36, 8);
   }
 
-  // Cards de indicadores / gráficos
   ctx.fillStyle = '#1e293b';
   ctx.fillRect(62, 30, 86, 48);
   ctx.fillRect(156, 30, 90, 48);
 
-  // Barras de gráfico
   const barColors = [policy.accent, '#38bdf8', '#34d399', '#fbbf24'];
   for (let b = 0; b < 4; b++) {
     const h = 14 + ((seed * 7 + b * 11) % 24);
@@ -804,7 +784,6 @@ function createMonitorScreenTexture(policy: Policy, seed: number): THREE.CanvasT
     ctx.fillRect(70 + b * 18, 72 - h, 11, h);
   }
 
-  // Linhas de prontuário / planilha na parte inferior
   ctx.fillStyle = '#1e293b';
   ctx.fillRect(62, 86, 184, 64);
   for (let r = 0; r < 4; r++) {
@@ -889,11 +868,6 @@ function generateArtworkDataURL(policy: Policy, photo: Partial<PhotoItem>, index
   return canvas.toDataURL('image/jpeg', 0.9);
 }
 
-/**
- * ============================================================================
- * MOBILIÁRIO DE REPARTIÇÃO (MESA, COMPUTADOR, CADEIRA, PASTAS E PLANTAS)
- * ============================================================================
- */
 function buildOfficeWorkstation(policy: Policy, seed: number): THREE.Group {
   const station = new THREE.Group();
 
@@ -903,14 +877,12 @@ function buildOfficeWorkstation(policy: Policy, seed: number): THREE.Group {
   const chairFabricMat = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.85 });
   const policyMat = new THREE.MeshStandardMaterial({ color: policy.color, roughness: 0.5 });
 
-  // Tampo da mesa (1.65m x 0.78m)
   const deskTop = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.06, 0.78), deskWoodMat);
   deskTop.position.set(0, 0.74, 0);
   deskTop.castShadow = true;
   deskTop.receiveShadow = true;
   station.add(deskTop);
 
-  // Pés metálicos da mesa
   [
     [-0.75, -0.32],
     [0.75, -0.32],
@@ -923,12 +895,10 @@ function buildOfficeWorkstation(policy: Policy, seed: number): THREE.Group {
     station.add(leg);
   });
 
-  // Painel frontal modesto da mesa
   const modestyPanel = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.36, 0.03), deskWoodMat);
   modestyPanel.position.set(0, 0.53, -0.3);
   station.add(modestyPanel);
 
-  // Base e haste do monitor
   const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.18), plasticDarkMat);
   standBase.position.set(-0.08, 0.78, -0.16);
   station.add(standBase);
@@ -937,13 +907,11 @@ function buildOfficeWorkstation(policy: Policy, seed: number): THREE.Group {
   standNeck.position.set(-0.08, 0.87, -0.19);
   station.add(standNeck);
 
-  // Monitor Widescreen
   const monitorHousing = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.42, 0.04), plasticDarkMat);
   monitorHousing.position.set(-0.08, 1.08, -0.17);
   monitorHousing.castShadow = true;
   station.add(monitorHousing);
 
-  // Tela do Monitor (voltada para +Z, onde senta o trabalhador)
   const screenTex = createMonitorScreenTexture(policy, seed);
   const screenMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(0.63, 0.37),
@@ -952,7 +920,6 @@ function buildOfficeWorkstation(policy: Policy, seed: number): THREE.Group {
   screenMesh.position.set(-0.08, 1.08, -0.148);
   station.add(screenMesh);
 
-  // Gabinete / Mini-CPU na lateral direita da mesa
   const pcTower = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.36, 0.36), plasticDarkMat);
   pcTower.position.set(0.62, 0.95, -0.12);
   pcTower.castShadow = true;
@@ -965,7 +932,6 @@ function buildOfficeWorkstation(policy: Policy, seed: number): THREE.Group {
   pcLed.position.set(0.62, 1.02, 0.062);
   station.add(pcLed);
 
-  // Teclado e Mouse
   const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.018, 0.14), plasticDarkMat);
   keyboard.position.set(-0.08, 0.78, 0.08);
   station.add(keyboard);
@@ -974,7 +940,6 @@ function buildOfficeWorkstation(policy: Policy, seed: number): THREE.Group {
   mouseObj.position.set(0.24, 0.78, 0.09);
   station.add(mouseObj);
 
-  // Pilha de pastas / cartilhas da política no canto esquerdo
   const folder1 = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.035, 0.32), policyMat);
   folder1.position.set(-0.58, 0.79, 0.06);
   folder1.rotation.y = 0.12;
@@ -988,12 +953,10 @@ function buildOfficeWorkstation(policy: Policy, seed: number): THREE.Group {
   folder2.rotation.y = -0.08;
   station.add(folder2);
 
-  // Caneca institucional
   const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.038, 0.095, 12), policyMat);
   mug.position.set(0.38, 0.818, -0.05);
   station.add(mug);
 
-  // Cadeira giratória (posicionada em z = +0.48, voltada para -Z)
   const chairGroup = new THREE.Group();
   chairGroup.position.set(-0.05, 0, 0.48);
 
@@ -1024,7 +987,6 @@ function buildOfficeWorkstation(policy: Policy, seed: number): THREE.Group {
 function buildOfficeCabinetAndPlant(policy: Policy): THREE.Group {
   const group = new THREE.Group();
 
-  // Gaveteiro / Arquivo baixo de repartição
   const cabinetMat = new THREE.MeshStandardMaterial({ color: '#d6cbb8', roughness: 0.7 });
   const handleMat = new THREE.MeshStandardMaterial({ color: '#3f3f46', metalness: 0.6, roughness: 0.4 });
   const cabinet = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.92, 0.52), cabinetMat);
@@ -1033,7 +995,6 @@ function buildOfficeCabinetAndPlant(policy: Policy): THREE.Group {
   cabinet.receiveShadow = true;
   group.add(cabinet);
 
-  // 3 gavetas com puxadores
   [0.2, 0.48, 0.76].forEach((gy) => {
     const drawerFace = new THREE.Mesh(
       new THREE.BoxGeometry(0.56, 0.22, 0.02),
@@ -1047,7 +1008,6 @@ function buildOfficeCabinetAndPlant(policy: Policy): THREE.Group {
     group.add(handle);
   });
 
-  // Caixa-arquivo colorida em cima do gaveteiro
   const archiveBox = new THREE.Mesh(
     new THREE.BoxGeometry(0.28, 0.32, 0.36),
     new THREE.MeshStandardMaterial({ color: policy.color, roughness: 0.55 })
@@ -1056,7 +1016,6 @@ function buildOfficeCabinetAndPlant(policy: Policy): THREE.Group {
   archiveBox.castShadow = true;
   group.add(archiveBox);
 
-  // Vaso de planta ao lado do arquivo
   const pot = new THREE.Mesh(
     new THREE.CylinderGeometry(0.2, 0.15, 0.34, 12),
     new THREE.MeshStandardMaterial({ color: '#9a3412', roughness: 0.8 })
@@ -1082,11 +1041,6 @@ function buildOfficeCabinetAndPlant(policy: Policy): THREE.Group {
   return group;
 }
 
-/**
- * ============================================================================
- * CONSTRUTOR DE PERSONAGEM 3D (SENTADO TRABALHANDO, CAMINHANDO E OBSERVANDO)
- * ============================================================================
- */
 function buildTechnicalPersonMesh(
   seed: number,
   policy: Policy,
@@ -1117,12 +1071,10 @@ function buildTechnicalPersonMesh(
     personGroup.add(shadowDisc);
   }
 
-  // Pernas (em pé vs. sentadas na cadeira)
   let leftLeg: THREE.Mesh;
   let rightLeg: THREE.Mesh;
 
   if (seated) {
-    // Coxas horizontais + canelas verticais
     const thighGeo = new THREE.BoxGeometry(0.13, 0.13, 0.38);
     const shinGeo = new THREE.BoxGeometry(0.12, 0.42, 0.13);
 
@@ -1156,24 +1108,20 @@ function buildTechnicalPersonMesh(
 
   const yOffset = seated ? -0.06 : 0;
 
-  // Tronco
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.54, 0.22), topMat);
   torso.position.set(0, 0.82 + yOffset, 0);
   torso.castShadow = true;
   personGroup.add(torso);
 
-  // Crachá / Cordão Institucional SUS
   const badge = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.03), accentMat);
   badge.position.set(0.09, 0.9 + yOffset, 0.12);
   personGroup.add(badge);
 
-  // Cabeça
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), skinMat);
   head.position.set(0, 1.26 + yOffset, 0);
   head.castShadow = true;
   personGroup.add(head);
 
-  // Penteados variados
   const hairStyle = seed % 3;
   if (hairStyle === 0) {
     const afroHair = new THREE.Mesh(new THREE.SphereGeometry(0.195, 16, 16), hairMat);
@@ -1194,13 +1142,11 @@ function buildTechnicalPersonMesh(
     personGroup.add(shortHair);
   }
 
-  // Braços
   const armGeo = new THREE.BoxGeometry(0.11, 0.44, 0.11);
   const leftArm = new THREE.Mesh(armGeo, topMat);
   const rightArm = new THREE.Mesh(armGeo, topMat);
 
   if (seated) {
-    // Braços estendidos na direção do teclado sobre a mesa
     leftArm.position.set(-0.23, 0.82 + yOffset, 0.16);
     leftArm.rotation.x = -1.05;
     leftArm.rotation.z = -0.12;
@@ -1216,7 +1162,6 @@ function buildTechnicalPersonMesh(
   personGroup.add(leftArm);
   personGroup.add(rightArm);
 
-  // Prancheta técnica de campo (apenas quando em pé)
   if (hasClipboard && !seated) {
     const board = new THREE.Mesh(
       new THREE.BoxGeometry(0.2, 0.03, 0.26),
@@ -1228,7 +1173,6 @@ function buildTechnicalPersonMesh(
     personGroup.add(board);
   }
 
-  // Hitbox invisível para hover e clique
   const hitBox = new THREE.Mesh(
     new THREE.CylinderGeometry(0.4, 0.4, 1.55, 8),
     new THREE.MeshBasicMaterial({ visible: false })
@@ -1239,18 +1183,12 @@ function buildTechnicalPersonMesh(
   return { personGroup, leftLeg, rightLeg, leftArm, rightArm, head, hitBox };
 }
 
-/**
- * ============================================================================
- * CENÁRIO EXTERNO (ESPLANADA ARBORIZADA, ORLA DO GUAÍBA E ENTORNO URBANO)
- * ============================================================================
- */
 function buildCityEnvironment(scene: THREE.Scene): {
   vehicles: VehicleAgent[];
   waterMesh: THREE.Mesh;
 } {
   const envGroup = new THREE.Group();
 
-  // 1. Esplanada elevada de calçamento claro conectando todas as 17 salas
   const esplanadeMat = new THREE.MeshStandardMaterial({
     color: '#342921',
     roughness: 0.85,
@@ -1261,7 +1199,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
   esplanadeDeck.receiveShadow = true;
   envGroup.add(esplanadeDeck);
 
-  // Moldura arquitetônica dourada/terracota da esplanada
   const borderMat = new THREE.MeshStandardMaterial({ color: '#7c5836', roughness: 0.65 });
   const borderTop = new THREE.Mesh(new THREE.BoxGeometry(66.8, 0.16, 0.6), borderMat);
   borderTop.position.set(0, 0.03, -27.2);
@@ -1279,7 +1216,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
   borderRight.position.set(33.2, 0.03, 0);
   envGroup.add(borderRight);
 
-  // 2. Canteiros verdes e árvores estilizadas (Ipês amarelos, roxos e figueiras)
   const grassMat = new THREE.MeshStandardMaterial({ color: '#1f3a29', roughness: 0.9 });
   const trunkMat = new THREE.MeshStandardMaterial({ color: '#4a3222', roughness: 0.85 });
   const crownColors = ['#15803d', '#166534', '#ca8a04', '#7e22ce', '#0f766e'];
@@ -1314,13 +1250,11 @@ function buildCityEnvironment(scene: THREE.Scene): {
     envGroup.add(tree);
   }
 
-  // Canteiros arborizados nos vãos e ao redor da esplanada
   const planterCoords: [number, number, number, number][] = [
     [-31, -24, 1.15, 2], [-31, -12, 1.0, 0], [-31, 0, 1.2, 3], [-31, 12, 0.95, 1], [-31, 24, 1.1, 0],
     [31, -24, 1.1, 3], [31, -12, 1.05, 0], [31, 0, 1.15, 2], [31, 12, 1.0, 1], [31, 24, 1.15, 0],
     [-20, -25.2, 1.0, 0], [-8, -25.2, 1.1, 2], [8, -25.2, 1.05, 1], [20, -25.2, 1.15, 3],
     [-20, 25.2, 1.1, 1], [-8, 25.2, 0.95, 3], [8, 25.2, 1.15, 0], [20, 25.2, 1.05, 2],
-    // Bosques externos
     [-42, -30, 1.35, 0], [-45, -8, 1.25, 2], [-41, 16, 1.3, 1], [-38, 34, 1.2, 3],
     [42, -28, 1.3, 1], [44, 6, 1.25, 0], [40, 28, 1.35, 2],
     [-16, 34, 1.25, 0], [0, 35, 1.3, 2], [18, 34, 1.2, 3]
@@ -1334,7 +1268,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
     addTree(px, pz, sc, cIdx);
   });
 
-  // 3. Bancos de praça e postes de luz quente na esplanada
   const benchWoodMat = new THREE.MeshStandardMaterial({ color: '#92400e', roughness: 0.7 });
   const lampPostMat = new THREE.MeshStandardMaterial({ color: '#1f2937', metalness: 0.7, roughness: 0.3 });
   const lampBulbMat = new THREE.MeshBasicMaterial({ color: '#fde68a' });
@@ -1370,7 +1303,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
     envGroup.add(bench);
   });
 
-  // Postes de iluminação na borda da esplanada
   [
     [-32.4, -18], [-32.4, 18], [32.4, -18], [32.4, 18],
     [-16, -26.4], [16, -26.4], [-16, 26.4], [16, 26.4]
@@ -1385,7 +1317,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
     envGroup.add(globe);
   });
 
-  // 4. Orla do Guaíba (faixa d'água e calçadão ao norte/oeste do pavilhão)
   const waterMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(240, 85),
     new THREE.MeshStandardMaterial({
@@ -1398,7 +1329,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
   waterMesh.position.set(0, -0.03, -84);
   envGroup.add(waterMesh);
 
-  // Calçadão da Orla
   const boardwalk = new THREE.Mesh(
     new THREE.BoxGeometry(240, 0.14, 4.2),
     new THREE.MeshStandardMaterial({ color: '#574637', roughness: 0.8 })
@@ -1407,7 +1337,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
   boardwalk.receiveShadow = true;
   envGroup.add(boardwalk);
 
-  // 5. Avenida Perimetral e Veículos Institucional/Urbano
   const roadMat = new THREE.MeshStandardMaterial({ color: '#18181b', roughness: 0.9 });
   const roadZ = new THREE.Mesh(new THREE.PlaneGeometry(240, 7.2), roadMat);
   roadZ.rotation.x = -Math.PI / 2;
@@ -1419,7 +1348,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
   roadX.position.set(52, -0.01, 0);
   envGroup.add(roadX);
 
-  // Faixas tracejadas da avenida
   const dashMat = new THREE.MeshBasicMaterial({ color: '#eab308' });
   for (let x = -110; x <= 110; x += 6) {
     const dash = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.18), dashMat);
@@ -1428,7 +1356,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
     envGroup.add(dash);
   }
 
-  // 6. Silhueta urbana institucional de Porto Alegre (prédios low-poly distantes)
   const buildingMat1 = new THREE.MeshStandardMaterial({ color: '#27221e', roughness: 0.85 });
   const buildingMat2 = new THREE.MeshStandardMaterial({ color: '#312923', roughness: 0.8 });
   const windowLitMat = new THREE.MeshBasicMaterial({ color: '#fbbf24' });
@@ -1450,7 +1377,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
     body.castShadow = true;
     bGroup.add(body);
 
-    // Pequenas janelas iluminadas nas fachadas
     for (let wy = -bh / 2 + 2.2; wy < bh / 2 - 1.5; wy += 2.6) {
       for (let wx = -bw / 2 + 1.5; wx < bw / 2 - 1.2; wx += 2.2) {
         if ((Math.abs(Math.round(wx + wy)) + idx) % 3 === 0) {
@@ -1464,7 +1390,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
     envGroup.add(bGroup);
   });
 
-  // 7. Veículos circulando na avenida (Ônibus e carros da rede municipal)
   const vehicles: VehicleAgent[] = [];
   const vehicleConfigs: {
     axis: 'x' | 'z';
@@ -1525,11 +1450,6 @@ function buildCityEnvironment(scene: THREE.Scene): {
   return { vehicles, waterMesh };
 }
 
-/**
- * ============================================================================
- * COMPONENTE PRINCIPAL: PAVILHÃO CPPS 3D ISOMÉTRICO
- * ============================================================================
- */
 export default function PavilhaoCPPSPage() {
   const [policies, setPolicies] = useState<Policy[]>(INITIAL_POLICIES);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
@@ -1710,11 +1630,6 @@ export default function PavilhaoCPPSPage() {
     }
   };
 
-  /**
-   * ============================================================================
-   * INICIALIZAÇÃO DO MUNDO 3D ISOMÉTRICO (THREE.JS + REPARTIÇÃO + ENTORNO)
-   * ============================================================================
-   */
   useEffect(() => {
     const container = mountRef.current;
     if (!container) return;
@@ -1792,7 +1707,6 @@ export default function PavilhaoCPPSPage() {
     groundPlane.receiveShadow = true;
     scene.add(groundPlane);
 
-    // Constrói esplanada, árvores, bancos, orla do Guaíba e avenida urbana
     const { vehicles, waterMesh } = buildCityEnvironment(scene);
 
     const wallMaterial = new THREE.MeshStandardMaterial({ color: '#e6dac8', roughness: 0.85, metalness: 0.02 });
@@ -1957,14 +1871,11 @@ export default function PavilhaoCPPSPage() {
       roomLight.position.set(0.5, 3.8, 0.5);
       roomGroup.add(roomLight);
 
-      // Mobiliário de repartição dentro de cada sala (sem bloquear os portais centrais)
-      // Estação 1: Quadrante sudeste da sala
       const workstation1 = buildOfficeWorkstation(policy, index * 3 + 1);
       workstation1.position.set(2.85, 0.16, 2.65);
       workstation1.rotation.y = -Math.PI / 5;
       roomGroup.add(workstation1);
 
-      // Estação 2 nas salas pares: Quadrante nordeste da sala
       if (index % 2 === 0) {
         const workstation2 = buildOfficeWorkstation(policy, index * 3 + 2);
         workstation2.position.set(3.15, 0.16, -2.55);
@@ -1972,7 +1883,6 @@ export default function PavilhaoCPPSPage() {
         roomGroup.add(workstation2);
       }
 
-      // Gaveteiro / arquivo e vaso de planta no quadrante sudoeste
       const cabinetAndPlant = buildOfficeCabinetAndPlant(policy);
       cabinetAndPlant.position.set(-3.35, 0.16, 3.85);
       cabinetAndPlant.rotation.y = Math.PI / 2;
@@ -1986,7 +1896,6 @@ export default function PavilhaoCPPSPage() {
       roomObjects.push({ policyIndex: index, policy, center: roomCenter, group: roomGroup, floorMesh, light: roomLight });
     });
 
-    // Passarelas Luminosas
     const bridgeDeckMat = new THREE.MeshStandardMaterial({ color: '#463527', roughness: 0.65, metalness: 0.15 });
     for (let i = 0; i < roomObjects.length; i++) {
       const currentRoom = roomObjects[i];
@@ -2013,7 +1922,6 @@ export default function PavilhaoCPPSPage() {
       walkwayStrips.push(stripMesh);
     }
 
-    // Pátio Central & Telão
     const plazaGroup = new THREE.Group();
     const plazaDeck = new THREE.Mesh(
       new THREE.CylinderGeometry(4.6, 4.9, 0.22, 36),
@@ -2067,30 +1975,22 @@ export default function PavilhaoCPPSPage() {
     plazaGroup.add(screenPivot);
     scene.add(plazaGroup);
 
-    /**
-     * ========================================================================
-     * POPULAÇÃO DE EQUIPES TÉCNICAS (TRABALHANDO NAS MESAS, OBSERVANDO E CAMINHANDO)
-     * ========================================================================
-     */
     const visitorsGroup = new THREE.Group();
     visitorsGroupRef.current = visitorsGroup;
     const visitorAgents: VisitorAgent[] = [];
     const visitorHitMeshes: THREE.Object3D[] = [];
 
     roomObjects.forEach((room, rIdx) => {
-      // A. Trabalhador(a) sentado(a) na Estação 1 digitando no computador
       const worker1Seed = rIdx * 11 + 2;
       const worker1 = buildTechnicalPersonMesh(worker1Seed, room.policy, { seated: true });
       const w1DeskOffset = new THREE.Vector3(2.85, 0.16, 2.65);
       const w1Rot = -Math.PI / 5;
-      // Posição da cadeira (0, 0, +0.44) rotacionada e somada ao centro da mesa
       const w1ChairLocal = new THREE.Vector3(-0.05, 0, 0.44).applyAxisAngle(
         new THREE.Vector3(0, 1, 0),
         w1Rot
       );
       const w1WorldPos = room.center.clone().add(w1DeskOffset).add(w1ChairLocal);
       worker1.personGroup.position.copy(w1WorldPos);
-      // Olhando para o monitor (-Z local da mesa => w1Rot + Math.PI)
       worker1.personGroup.rotation.y = w1Rot + Math.PI;
 
       const roleTitle1 = TECHNICAL_ROLES[rIdx % TECHNICAL_ROLES.length];
@@ -2123,7 +2023,6 @@ export default function PavilhaoCPPSPage() {
         policy: room.policy
       });
 
-      // B. Trabalhador(a) na Estação 2 (nas salas pares)
       if (rIdx % 2 === 0) {
         const worker2Seed = rIdx * 11 + 5;
         const worker2 = buildTechnicalPersonMesh(worker2Seed, room.policy, { seated: true });
@@ -2168,7 +2067,6 @@ export default function PavilhaoCPPSPage() {
         });
       }
 
-      // C. Observador(a) em pé diante dos quadros
       const obsSeed = rIdx * 7 + 1;
       const obs = buildTechnicalPersonMesh(obsSeed, room.policy, { hasClipboard: true });
       const localOffset = new THREE.Vector3(-2.6, 0.16, -2.5 + (rIdx % 3) * 0.45);
@@ -2210,7 +2108,6 @@ export default function PavilhaoCPPSPage() {
       });
     });
 
-    // D. Equipes caminhando pelas passarelas luminosas entre as 17 salas
     const numWalkers = 10;
     for (let w = 0; w < numWalkers; w++) {
       const startRoomIdx = (w * 2) % roomObjects.length;
@@ -2251,7 +2148,6 @@ export default function PavilhaoCPPSPage() {
       });
     }
 
-    // E. Pessoas no Pátio Central e na Esplanada externa
     [
       { pos: new THREE.Vector3(2.8, 0.22, 3.1), target: new THREE.Vector3(0, 0.22, 0), seed: 201 },
       { pos: new THREE.Vector3(3.4, 0.22, 2.2), target: new THREE.Vector3(0, 0.22, 0), seed: 202 },
@@ -2317,7 +2213,6 @@ export default function PavilhaoCPPSPage() {
       }
     };
 
-    // Raycasting
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     let pointerDownPos = { x: 0, y: 0 };
@@ -2582,11 +2477,9 @@ export default function PavilhaoCPPSPage() {
         (strip.material as THREE.MeshBasicMaterial).opacity = pulseOpacity;
       });
 
-      // Reflexo suave nas águas do Guaíba
       (waterMesh.material as THREE.MeshStandardMaterial).roughness =
         0.2 + Math.sin(tSec * 1.4) * 0.04;
 
-      // Movimentação dos veículos na avenida perimetral
       vehicles.forEach((v) => {
         if (v.axis === 'x') {
           v.group.position.x += v.dir * v.speed * dt;
@@ -2599,7 +2492,6 @@ export default function PavilhaoCPPSPage() {
         }
       });
 
-      // Animação dos personagens (trabalhando nos computadores, caminhando e observando)
       if (visitorsGroup.visible) {
         visitorAgents.forEach((agent) => {
           if (agent.mode === 'walk') {
@@ -2633,13 +2525,11 @@ export default function PavilhaoCPPSPage() {
             agent.leftArm.rotation.x = -stride * 0.35;
             agent.rightArm.rotation.x = stride * 0.35;
           } else if (agent.mode === 'work') {
-            // Técnico digitando no computador e consultando a tela
             const typing = Math.sin(tSec * 14 + agent.phase);
             agent.leftArm.rotation.x = -1.05 + typing * 0.09;
             agent.rightArm.rotation.x = -1.05 - typing * 0.09;
             agent.group.rotation.y = agent.baseRotY + Math.sin(tSec * 1.1 + agent.phase) * 0.08;
           } else {
-            // Observador em pé
             const idleWave = Math.sin(tSec * 1.8 + agent.phase);
             agent.group.rotation.y = agent.baseRotY + idleWave * 0.14;
             agent.group.position.y = agent.basePos.y + Math.sin(tSec * 2.4 + agent.phase) * 0.012;
@@ -2797,10 +2687,8 @@ export default function PavilhaoCPPSPage() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#1c1713] text-[#f7efe4] select-none font-sans">
-      {/* Container do Canvas 3D */}
       <div ref={mountRef} className="fixed inset-0 w-full h-full z-0 cursor-grab active:cursor-grabbing" />
 
-      {/* Tooltip Flutuante */}
       {tooltip.visible && (
         <div
           style={{ left: tooltip.x + 14, top: tooltip.y + 14 }}
@@ -2819,7 +2707,6 @@ export default function PavilhaoCPPSPage() {
         </div>
       )}
 
-      {/* Barra Superior */}
       <header className="fixed top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
         <div className="bg-[#221b16]/85 backdrop-blur-md border border-amber-200/20 shadow-xl rounded-2xl px-4 py-3 flex items-center gap-3.5 pointer-events-auto max-w-xl">
           <button
@@ -2901,7 +2788,6 @@ export default function PavilhaoCPPSPage() {
         </div>
       </header>
 
-      {/* Menu Lateral (Índice das 17 Políticas) */}
       <aside
         className={`fixed top-24 bottom-28 left-4 z-20 w-80 max-w-[calc(100vw-2rem)] bg-[#221b16]/88 backdrop-blur-md border border-amber-200/20 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-all duration-300 ${
           sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-[120%] opacity-0 pointer-events-none'
@@ -2980,7 +2866,6 @@ export default function PavilhaoCPPSPage() {
         </div>
       </aside>
 
-      {/* HUD Inferior de Navegação */}
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 bg-[#221b16]/88 backdrop-blur-md border border-amber-300/25 shadow-2xl rounded-2xl px-4 py-3 flex flex-col gap-2 w-[92vw] max-w-2xl">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -3070,7 +2955,6 @@ export default function PavilhaoCPPSPage() {
         )}
       </div>
 
-      {/* MODAL LIGHTBOX (Detalhes da Obra) */}
       {selectedArtwork && (
         <div
           onClick={() => setSelectedArtwork(null)}
@@ -3131,7 +3015,6 @@ export default function PavilhaoCPPSPage() {
         </div>
       )}
 
-      {/* MODAL VÍDEO-RESUMO */}
       {videoModalOpen && (
         <div
           onClick={() => setVideoModalOpen(false)}
@@ -3218,7 +3101,6 @@ export default function PavilhaoCPPSPage() {
         </div>
       )}
 
-      {/* MODAL CURADORIA (Adicionar Foto) */}
       {curatorModalOpen && (
         <div
           onClick={() => setCuratorModalOpen(false)}
@@ -3365,7 +3247,6 @@ export default function PavilhaoCPPSPage() {
         </div>
       )}
 
-      {/* Notificação Toast */}
       {toastMessage && (
         <div className="fixed top-20 right-4 z-50 bg-[#221b16]/95 border border-emerald-400/40 text-emerald-200 px-4 py-2.5 rounded-xl text-xs font-semibold shadow-2xl">
           {toastMessage}
